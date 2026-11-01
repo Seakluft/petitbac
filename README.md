@@ -61,3 +61,4 @@ python3 -m http.server 8000
 ```
 
 Tests : `node tests/rules.test.js`
+docs: livraison directe sur main
