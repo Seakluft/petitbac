@@ -102,7 +102,6 @@
       case 'vote': {
         state.myVotesHost = state.myVotesHost || {};
         state.myVotesHost[from] = msg.votes;
-        state.finishedFlags['vote:' + from] = true;
         bcast({ type: 'vote-progress', id: from });
         maybeFinishVotes();
         break;
@@ -178,7 +177,7 @@
         updatePlayStatus();
         break;
       }
-      case 'vote-progress': break;
+      case 'vote-progress': updateVoteProgress(); break;
       case 'kicked': toast('👋 L\'hôte a fermé la partie'); location.hash = ''; location.reload(); break;
     }
   }
@@ -511,6 +510,7 @@
     });
     const submit = $('#btn-submit-votes');
     submit.classList.remove('hidden');
+    updateVoteProgress();
     show('#screen-vote');
     $('#vote-round').textContent = 'Manche ' + (state.round + 1) + ' — lettre « ' + state.letter.toUpperCase() + ' »';
   }
@@ -527,7 +527,6 @@
     $('#btn-submit-votes').addEventListener('click', () => {
       if (state.role === 'host') {
         state.myVotesHost[myId()] = state.myVotes;
-        state.finishedFlags['vote:' + myId()] = true;
         bcast({ type: 'vote-progress', id: myId() });
         maybeFinishVotes();
       } else {
@@ -543,9 +542,20 @@
     return state.players.every(p => votes[p.id]);
   }
 
+  function updateVoteProgress() {
+    const votes = state.myVotesHost || {};
+    const done = state.players.filter(p => votes[p.id]).length;
+    const el = $('#vote-progress');
+    if (el) el.textContent = '🗳️ ' + done + ' / ' + state.players.length + ' joueurs ont voté — on attend tout le monde…';
+  }
+
   function maybeFinishVotes() {
     if (state.role !== 'host' || state.phase !== 'vote') return;
-    if (!allVotesCollected()) return;
+    if (!allVotesCollected()) {
+      updateVoteProgress();
+      return;
+    }
+    updateVoteProgress();
     state.phase = 'scores';
     const votesMap = state.myVotesHost;
     const entries = R.applyVotes(state.entries, state.players.map(p => votesMap[p.id] || {}));
@@ -647,14 +657,16 @@
   // ---------- impression ----------
   function buildPrintSheet() {
     const sheet = $('#print-sheet');
-    const cats = state.categories.length ? state.categories : D.presetCategories.slice(0, 8);
-    let rows = cats.map(c => '<tr><td class="pc">' + esc(c) + '</td><td class="pw"></td></tr>').join('');
+    const cats = state.categories.length ? state.categories : ['Prénom', 'Animal', 'Fruit ou légume', 'Ville ou pays', 'Objet', 'Métier', 'Star ou personnage', 'Film ou série'];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const head = '<tr><th class="pc">Catégorie</th>' + letters.map(l => '<th class="pl">' + l + '</th>').join('') + '<th class="pp">POINTS</th></tr>';
+    const rows = cats.map(c => '<tr><td class="pc">' + esc(c) + '</td>' + letters.map(() => '<td class="pw"></td>').join('') + '<td class="pp"></td></tr>').join('');
     sheet.innerHTML =
       '<div class="print-sheet">' +
-      '<h1>🚀 Petit Bac Espace — Grille de jeu</h1>' +
-      '<p class="pin">Lettre : <b>____</b> &nbsp;•&nbsp; Nom : <b>________________</b> &nbsp;•&nbsp; ' + cats.length + ' catégories</p>' +
-      '<table class="ptable"><thead><tr><th style="width:38%">Catégorie</th><th>Ma réponse</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<p class="pin small">Rappel : mot unique = 10 pts • doublon = 1 pt • mot invalide = 0 pt</p>' +
+      '<h1>🚀 Le jeu du petit bac</h1>' +
+      '<p class="pin">Nom du joueur : <span class="pline">____________________</span> &nbsp;•&nbsp; Nombre de catégories : ' + cats.length + '</p>' +
+      '<table class="ptable"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="pin small">Barème : mot unique = 2 pts • mot partagé (doublon) = 1 pt • case vide / hors sujet / refusé = 0 pt &nbsp;•&nbsp; POINTAGE FINAL : ________</p>' +
       '</div>';
   }
 

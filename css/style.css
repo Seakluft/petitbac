@@ -257,19 +257,23 @@ table.results th { font-size: .8rem; color: #7a739e; text-transform: uppercase; 
   .print-sheet { display: block !important; max-width: none; padding: 0; }
 }
 
-/* impression A4 */
+/* impression A4 paysage, grille façon CGI (lettres A-Z en colonnes) */
 .print-sheet { display: none; }
 @media print {
-  @page { size: A4 portrait; margin: 14mm; }
+  @page { size: A4 landscape; margin: 10mm; }
   body { background: #fff !important; }
   .app { max-width: none; padding: 0; }
   .print-sheet { display: block !important; color: #000; font-family: var(--font); }
-  .print-sheet h1 { font-size: 22pt; margin: 0 0 4pt; }
-  .print-sheet .pin { font-size: 11pt; margin: 0 0 10pt; }
-  .print-sheet .pin.small { font-size: 9pt; color: #444; margin-top: 10pt; }
-  table.ptable { width: 100%; border-collapse: collapse; }
-  table.ptable th, table.ptable td { border: 1.6pt solid #2b2350; padding: 7pt 8pt; font-size: 12pt; text-align: left; }
-  table.ptable th { background: #efeaff; }
-  table.ptable td.pc { font-weight: 800; width: 38%; }
-  table.ptable td.pw { height: 26pt; }
+  .print-sheet h1 { font-size: 20pt; margin: 0 0 4pt; }
+  .print-sheet .pin { font-size: 10.5pt; margin: 0 0 8pt; }
+  .print-sheet .pin .pline { display: inline-block; min-width: 160pt; border-bottom: 1.2pt solid #000; }
+  .print-sheet .pin.small { font-size: 8.5pt; color: #333; margin-top: 8pt; }
+  table.ptable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.ptable th, table.ptable td { border: 1.2pt solid #2b2350; text-align: center; }
+  table.ptable th { background: #efeaff; font-size: 8pt; padding: 2pt 1pt; }
+  table.ptable th.pc { font-size: 9pt; text-align: left; padding: 3pt 5pt; width: 17%; }
+  table.ptable th.pp { font-size: 8pt; width: 7%; }
+  table.ptable td.pc { font-weight: 800; font-size: 9pt; text-align: left; padding: 3pt 5pt; }
+  table.ptable td.pw { height: 18pt; }
+  table.ptable td.pp { background: #fdf6e3; }
 }

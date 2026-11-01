@@ -93,7 +93,7 @@
     return entries;
   }
 
-  const PTS_UNIQUE = 10;
+  const PTS_UNIQUE = 2;
   const PTS_DUPLICATE = 1;
 
   function scoreRound(entries, playerIds) {

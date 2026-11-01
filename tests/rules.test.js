@@ -41,7 +41,7 @@ t('doublon détecté : même mot normalisé = 1 entrée, plusieurs joueurs', () 
   assert.strictEqual(entries.length, 3);
 });
 
-t('scoring : unique=10, doublon=1, refusé=0', () => {
+t('scoring : unique=2, doublon=1, refusé=0 (barème standard)', () => {
   const players = [
     { playerId: 'a', answers: ['Mars', 'Météorite'] },
     { playerId: 'b', answers: ['mars', 'Lune'] },
@@ -54,7 +54,7 @@ t('scoring : unique=10, doublon=1, refusé=0', () => {
     {}
   ]);
   const scores = R.scoreRound(entries, ['a', 'b', 'c']);
-  assert.strictEqual(scores.a, 10 + 1);  // Météorite unique (10) + Mars doublon (1)
+  assert.strictEqual(scores.a, 2 + 1);    // Météorite unique (2) + Mars doublon (1)
   assert.strictEqual(scores.b, 1);        // Mars doublon (1) + Lune hors lettre (0)
   assert.strictEqual(scores.c, 0);        // vide + mot non accepté
 });
@@ -85,8 +85,8 @@ t('genRoomCode : 5 caractères valides', () => {
 });
 
 t('totalScores additionne les manches', () => {
-  const totals = R.totalScores([{ a: 10, b: 1 }, { a: 1, b: 10 }], ['a', 'b']);
-  assert.deepStrictEqual(totals, { a: 11, b: 11 });
+  const totals = R.totalScores([{ a: 2, b: 1 }, { a: 1, b: 2 }], ['a', 'b']);
+  assert.deepStrictEqual(totals, { a: 3, b: 3 });
 });
 
 console.log('\n' + passed + ' tests OK');
