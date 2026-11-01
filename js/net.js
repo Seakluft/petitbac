@@ -1,7 +1,7 @@
 window.PBNet = (function () {
   'use strict';
 
-  const PREFIX = 'petitbac-espace-v1-';
+  const PREFIX = 'petitbac-v2-';
 
   function hostId(code) { return PREFIX + 'host-' + code; }
   function guestId(code, name) {

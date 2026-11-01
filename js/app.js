@@ -1,4 +1,4 @@
-/* Petit Bac Espace — application principale */
+/* Petit Bac — application principale */
 (function () {
   'use strict';
 
@@ -701,7 +701,7 @@
     const rows = cats.map(c => '<tr><td class="pc">' + esc(c) + '</td>' + letters.map(() => '<td class="pw"></td>').join('') + '<td class="pp"></td></tr>').join('');
     sheet.innerHTML =
       '<div class="print-sheet">' +
-      '<h1>🚀 Le jeu du petit bac</h1>' +
+      '<h1>🚀 Petit Bac</h1>' +
       '<p class="pin">Nom du joueur : <span class="pline">____________________</span> &nbsp;•&nbsp; Nombre de catégories : ' + cats.length + '</p>' +
       '<table class="ptable"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>' +
       '<p class="pin small">Barème : mot unique = 2 pts • mot partagé (doublon) = 1 pt • case vide / hors sujet / refusé = 0 pt &nbsp;•&nbsp; POINTAGE FINAL : ________</p>' +

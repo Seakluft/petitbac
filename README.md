@@ -1,4 +1,4 @@
-# 🚀 Petit Bac Espace
+# 🚀 Petit Bac
 
 Jeu du **petit bac** multijoueur en direct, optimisé mobile, 100 % gratuit (hébergé sur GitHub Pages, aucun serveur payant).
 
