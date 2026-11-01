@@ -981,16 +981,16 @@
   }
 
   // ---------- thèmes ----------
-  const THEMES = ['espace', 'jungle', 'mer', 'bonbon', 'xp'];
+  const THEMES = ['carnet', 'espace', 'jungle', 'mer', 'bonbon', 'xp'];
   function applyTheme(name) {
-    document.body.dataset.theme = THEMES.indexOf(name) >= 0 ? name : 'espace';
+    document.body.dataset.theme = THEMES.indexOf(name) >= 0 ? name : 'carnet';
     $$('.theme-chip').forEach(c => c.classList.toggle('on', c.dataset.theme === document.body.dataset.theme));
     try { localStorage.setItem('pb-theme', document.body.dataset.theme); } catch (e) {}
   }
   function initTheme() {
     $$('.theme-chip').forEach(c => c.addEventListener('click', () => applyTheme(c.dataset.theme)));
-    let saved = 'espace';
-    try { saved = localStorage.getItem('pb-theme') || 'espace'; } catch (e) {}
+    let saved = 'carnet';
+    try { saved = localStorage.getItem('pb-theme') || 'carnet'; } catch (e) {}
     applyTheme(saved);
   }
 
