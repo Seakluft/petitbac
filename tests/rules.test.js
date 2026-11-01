@@ -111,6 +111,36 @@ t('buildRoundEntries : hors catégorie marqué auto=false même si dans le dicti
   assert.strictEqual(banane.catCheck, false);
 });
 
+t('singularize : pluriels usuels', () => {
+  assert.strictEqual(R.singularize('pommes'), 'pomme');
+  assert.strictEqual(R.singularize('chevaux'), 'cheval');
+  assert.strictEqual(R.singularize('bateaux'), 'bateau');
+  assert.strictEqual(R.singularize('hiboux'), 'hibou');
+  assert.strictEqual(R.singularize('nez'), null);
+});
+
+t('pluriel accepté dans le dictionnaire et les catégories', () => {
+  const d = new Set(['pomme', 'paris']);
+  assert.ok(R.isInDictionary('Pommes', d));
+  assert.ok(!R.isInDictionary('zzzzz', d));
+  const cs = { ville: new Set(['paris']) };
+  assert.strictEqual(R.categoryCheck('Paris', 'ville', cs), true);
+  assert.strictEqual(R.categoryCheck('Villes', 'ville', cs), false); // pluriel de la catégorie, pas d'une entrée
+});
+
+t('pickLetter avec usedLetters ne rejoue pas une lettre', () => {
+  const pool = R.LETTERS.filter(l => R.HARD_LETTERS.indexOf(l) === -1);
+  const used = new Set(pool.slice(0, pool.length - 3)); // il reste 3 lettres
+  for (let i = 0; i < 50; i++) {
+    const l = R.pickLetter(Math.random, false, used);
+    assert.ok(!used.has(l), 'lettre déjà jouée: ' + l);
+  }
+  // si tout est utilisé, on retombe sur le pool complet sans planter
+  const all = new Set(R.LETTERS);
+  const l = R.pickLetter(Math.random, false, all);
+  assert.ok(R.LETTERS.includes(l));
+});
+
 t('totalScores additionne les manches', () => {
   const totals = R.totalScores([{ a: 2, b: 1 }, { a: 1, b: 2 }], ['a', 'b']);
   assert.deepStrictEqual(totals, { a: 3, b: 3 });

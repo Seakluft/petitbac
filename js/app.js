@@ -19,6 +19,8 @@
     withTimer: true,
     hardLetters: false,
     numRounds: 5,
+    stopMode: false,      // mode « premier arrivé stoppe la manche »
+    usedLetters: new Set(),
     round: 0,             // index de manche courante (0-based)
     phase: 'home',        // home|setup|lobby|playing|reveal|vote|scores|final
     letter: '',
@@ -74,7 +76,7 @@
 
   // listes par catégorie chargées à la demande (une seule fois)
   state.catSets = state.catSets || {};
-  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt' };
+  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt' };
   function loadCatSets(categories) {
     const keys = categories.map(c => window.PB_CATS.catKey(c));
     state.catKeys = keys;
@@ -106,6 +108,20 @@
     switch (msg.type) {
       case 'hello': {
         const name = String(msg.name || 'Joueur').slice(0, 16);
+        const existing = state.players.find(p => p.id === from);
+        if (existing) {
+          existing.name = name;
+          state.net.sendTo(from, {
+            type: 'welcome', you: existing, players: state.players, settings: currentSettings(),
+            resume: state.phase !== 'lobby' && state.phase !== 'setup'
+              ? { phase: state.phase, letter: state.letter, round: state.round + 1, entries: state.entries, answers: state.answers[from], myVotes: (state.myVotesHost || {})[from] }
+              : null
+          });
+          bcast({ type: 'players', players: state.players });
+          renderLobby();
+          if (state.phase === 'playing') bcast({ type: 'finished', id: from, players: state.players });
+          break;
+        }
         if (state.players.length >= D.maxPlayers) { state.net.sendTo(from, { type: 'full' }); return; }
         if (state.phase !== 'lobby' && state.phase !== 'setup') { state.net.sendTo(from, { type: 'full', reason: 'partie-en-cours' }); return; }
         const avatar = D.avatars[state.players.length % D.avatars.length];
@@ -120,8 +136,15 @@
         state.answers[from] = msg.answers;
         state.finishedFlags[from] = true;
         bcast({ type: 'finished', id: from, players: state.players });
-        updateLobbyWaiting();
         maybeEndRound();
+        break;
+      }
+      case 'stop': {
+        if (state.stopMode) endRoundByHost();
+        break;
+      }
+      case 'chat': {
+        bcast({ type: 'chat', from, text: String(msg.text || '').slice(0, 60) });
         break;
       }
       case 'vote': {
@@ -151,7 +174,8 @@
       timer: state.timer,
       withTimer: state.withTimer,
       hardLetters: state.hardLetters,
-      numRounds: state.numRounds
+      numRounds: state.numRounds,
+      stopMode: state.stopMode
     };
   }
 
@@ -161,6 +185,29 @@
         state.players = msg.players;
         applySettings(msg.settings);
         toast('✅ Bienvenue ' + msg.you.name + ' !');
+        if (msg.resume && msg.resume.phase === 'playing') {
+          state.phase = 'playing';
+          state.letter = msg.resume.letter;
+          state.round = msg.resume.round - 1;
+          state.answers = msg.resume.answers || {};
+          renderAnswerForm();
+          if (msg.resume.answers && state.answers[myId()]) fillMyAnswers(msg.resume.answers);
+          show('#screen-play');
+          $('#play-round').textContent = 'Manche ' + msg.resume.round + ' / ' + state.numRounds;
+          $('#play-letter').textContent = state.letter;
+          toast('🔁 Reconnexion réussie, manche en cours !');
+          break;
+        }
+        if (msg.resume && msg.resume.phase === 'vote') {
+          state.phase = 'vote';
+          state.letter = msg.resume.letter;
+          state.round = msg.resume.round - 1;
+          state.entries = msg.resume.entries || [];
+          state.myVotes = msg.resume.myVotes || {};
+          showReveal(state.entries);
+          toast('🔁 Reconnexion réussie, vote en cours !');
+          break;
+        }
         show('#screen-lobby');
         state.phase = 'lobby';
         renderLobby();
@@ -202,6 +249,10 @@
         updatePlayStatus();
         break;
       }
+      case 'chat': {
+        addChatBubble(msg.from, msg.text);
+        break;
+      }
       case 'vote-progress': updateVoteProgress(); break;
       case 'kicked': toast('👋 L\'hôte a fermé la partie'); location.hash = ''; location.reload(); break;
     }
@@ -214,6 +265,7 @@
     state.withTimer = s.withTimer;
     state.hardLetters = s.hardLetters;
     state.numRounds = s.numRounds;
+    state.stopMode = !!s.stopMode;
   }
 
   // ---------- écrans ----------
@@ -345,6 +397,7 @@
     state.withTimer = $('#opt-with-timer').checked;
     state.hardLetters = $('#opt-hard').checked;
     state.numRounds = Math.max(1, Math.min(10, parseInt($('#opt-rounds').value, 10) || 5));
+    state.stopMode = $('#opt-stop').checked;
   }
 
   // ---------- lobby ----------
@@ -374,7 +427,9 @@
       state.round = 0;
       state.roundScores = [];
       state.totals = {};
-      const letter = R.pickLetter(Math.random, state.hardLetters);
+      state.usedLetters = new Set();
+      const letter = R.pickLetter(Math.random, state.hardLetters, state.usedLetters);
+      state.usedLetters.add(letter);
       bcast({ type: 'start', letter, round: 1, settings: currentSettings() });
       startRound(letter, 1);
     });
@@ -388,6 +443,7 @@
   function startRound(letter, roundNo) {
     state.phase = 'playing';
     state.letter = letter;
+    state.usedLetters.add(letter);
     state.entries = [];
     state.answers = {};
     state.myVotes = {};
@@ -454,10 +510,15 @@
   function updatePlayStatus() {
     const el = $('#play-status');
     if (!el) return;
-    const n = Object.keys(state.finishedFlags).filter(k => !k.startsWith('vote:')).length;
-    el.textContent = state.withTimer
-      ? n + ' / ' + state.players.length + ' joueurs ont terminé'
-      : 'En attente de ' + (state.players.length - n) + ' joueur(s)… (bouton Terminé envoyé)';
+    const done = state.players.filter(p => state.finishedFlags[p.id]);
+    const n = done.length;
+    const names = done.map(p => p.avatar + ' ' + p.name).join(' ');
+    el.textContent = n + ' / ' + state.players.length + ' ont terminé' + (names ? ' : ' + names : '');
+  }
+
+  function fillMyAnswers(answers) {
+    const inputs = $$('#answers-form input');
+    inputs.forEach((inp, i) => { inp.value = answers[i] || ''; liveCheck(inp); });
   }
 
   function updateLobbyWaiting() { /* conservé pour compatibilité */ }
@@ -484,6 +545,13 @@
     updatePlayStatus();
   }
 
+  function stopRound() {
+    if (state.phase !== 'playing') return;
+    if (state.role === 'host') endRoundByHost();
+    else send({ type: 'stop' });
+    toast('🛑 Stop ! La manche s\'arrête.');
+  }
+
   function maybeEndRound() {
     if (state.role !== 'host' || state.phase !== 'playing') return;
     const allDone = state.players.every(p => state.finishedFlags[p.id]);
@@ -500,6 +568,7 @@
     );
     state.entries = entries;
     bcast({ type: 'reveal', entries, round: state.round + 1 });
+    sfx('start');
     showReveal(entries);
   }
 
@@ -601,6 +670,8 @@
     state.roundScores.push(roundScore);
     state.totals = R.totalScores(state.roundScores, state.players.map(p => p.id));
     bcast({ type: 'vote-result', entries, roundScore, totals: state.totals, round: state.round + 1 });
+    const anyRejected = entries.some(e => !e.accepted);
+    sfx(anyRejected ? 'bad' : 'good');
     showScores(entries, roundScore, state.totals, true);
   }
 
@@ -643,7 +714,7 @@
           bcast({ type: 'final', totals: state.totals });
           showFinal(state.totals);
         } else {
-          const letter = R.pickLetter(Math.random, state.hardLetters);
+          const letter = R.pickLetter(Math.random, state.hardLetters, state.usedLetters);
           bcast({ type: 'start', letter, round: state.round + 2, settings: currentSettings() });
           startRound(letter, state.round + 2);
         }
@@ -677,12 +748,14 @@
     const best = ranking.length ? ranking[0].pts : 0;
     const winners = ranking.filter(r => r.pts === best);
     box.innerHTML = winners.map(r => '<div style="font-size:1.4rem;font-weight:800">🏆 ' + esc(r.p.name) + ' — ' + r.pts + ' pts</div>').join('');
+    sfx('win');
+    confetti();
     const again = $('#btn-again');
     if (state.role === 'host') {
       again.classList.remove('hidden');
       again.onclick = () => {
-        state.round = 0; state.roundScores = []; state.totals = {};
-        const letter = R.pickLetter(Math.random, state.hardLetters);
+        state.round = 0; state.roundScores = []; state.totals = {}; state.usedLetters = new Set();
+        const letter = R.pickLetter(Math.random, state.hardLetters, state.usedLetters);
         bcast({ type: 'start', letter, round: 1, settings: currentSettings() });
         startRound(letter, 1);
       };
@@ -708,18 +781,130 @@
       '</div>';
   }
 
+  // ---------- chat rapide ----------
+  const CHAT_PHRASES = ['🛑 Stop !', '👏 Bravo !', '⏳ Attends-moi…', '😂 Trop fort', '🤔 Hmm…', '🚀 Allez !'];
+  function addChatBubble(fromId, text) {
+    const p = state.players.find(x => x.id === fromId);
+    const name = p ? p.name : 'quelqu\'un';
+    $$('.chat-box').forEach(box => {
+      const line = document.createElement('div');
+      line.className = 'chat-line';
+      line.textContent = name + ' : ' + text;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    });
+    sfx('chat');
+  }
+  function initChat() {
+    $$('.chat-send').forEach(zone => {
+      CHAT_PHRASES.forEach(ph => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn small ghost chat-phrase';
+        b.textContent = ph;
+        b.addEventListener('click', () => {
+          sendOrBcast({ type: 'chat', text: ph });
+          addChatBubble(myId(), ph);
+        });
+        zone.appendChild(b);
+      });
+    });
+  }
+
+  // ---------- sons (WebAudio, zéro fichier) ----------
+  let audioCtx = null;
+  let muted = false;
+  function sfx(kind) {
+    if (muted) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = audioCtx.currentTime;
+      const notes = {
+        chat: [660, 0.07],
+        good: [523, 0.09, 784, 0.12],
+        bad: [220, 0.15],
+        win: [523, 0.1, 659, 0.1, 784, 0.1, 1046, 0.25],
+        start: [392, 0.08, 523, 0.12]
+      }[kind] || [440, 0.1];
+      let cursor = t;
+      for (let i = 0; i < notes.length; i += 2) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.frequency.value = notes[i];
+        o.type = 'triangle';
+        g.gain.setValueAtTime(0.12, cursor);
+        g.gain.exponentialRampToValueAtTime(0.001, cursor + notes[i + 1]);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(cursor); o.stop(cursor + notes[i + 1]);
+        cursor += notes[i + 1];
+      }
+    } catch (e) {}
+  }
+
+  // ---------- confettis ----------
+  function confetti() {
+    const box = $('#confetti');
+    if (!box) return;
+    const colors = ['#ffb347', '#7c5cff', '#2ecc71', '#ff5c7a', '#4fc3f7', '#ffe066'];
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[i % colors.length];
+      c.style.animationDelay = (Math.random() * 0.6) + 's';
+      c.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+      box.appendChild(c);
+      setTimeout(() => c.remove(), 3200);
+    }
+  }
+
+  // ---------- thèmes ----------
+  const THEMES = ['espace', 'jungle', 'mer', 'bonbon', 'xp'];
+  function applyTheme(name) {
+    document.body.dataset.theme = THEMES.indexOf(name) >= 0 ? name : 'espace';
+    $$('.theme-chip').forEach(c => c.classList.toggle('on', c.dataset.theme === document.body.dataset.theme));
+    try { localStorage.setItem('pb-theme', document.body.dataset.theme); } catch (e) {}
+  }
+  function initTheme() {
+    $$('.theme-chip').forEach(c => c.addEventListener('click', () => applyTheme(c.dataset.theme)));
+    let saved = 'espace';
+    try { saved = localStorage.getItem('pb-theme') || 'espace'; } catch (e) {}
+    applyTheme(saved);
+  }
+
+  // ---------- partage natif ----------
+  function shareInvite() {
+    const url = shareUrl();
+    const text = '🚀 Rejoins ma partie de Petit Bac ! Code ' + state.code + ' : ' + url;
+    if (navigator.share) {
+      navigator.share({ title: 'Petit Bac', text, url }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast('🔗 Invitation copiée !'));
+    } else toast(text);
+  }
+
   // ---------- boot ----------
   function init() {
     buildPrintSheet();
+    initTheme();
     initHome();
     initSetup();
     initLobby();
     initVote();
+    initChat();
     $('#btn-submit-answers').addEventListener('click', submitAnswers);
+    const stopBtn = $('#btn-stop-round');
+    if (stopBtn) stopBtn.addEventListener('click', stopRound);
     $('#btn-print-play').addEventListener('click', () => { buildPrintSheet(); window.print(); });
     $('#btn-quit').addEventListener('click', () => { if (confirm('Quitter la partie ?')) { location.hash = ''; location.reload(); } });
+    $('#btn-mute').addEventListener('click', () => {
+      muted = !muted;
+      $('#btn-mute').textContent = muted ? '🔇 Son off' : '🔊 Son on';
+    });
+    $$('.btn-share').forEach(b => b.addEventListener('click', shareInvite));
     loadDict();
     show('#screen-home');
+    sfx && setTimeout(() => sfx('start'), 300);
     window.addEventListener('beforeunload', () => { if (state.net) { sendOrBcast({ type: 'leave' }); } });
   }
 

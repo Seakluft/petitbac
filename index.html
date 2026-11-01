@@ -17,6 +17,14 @@
   <header class="masthead">
     <h1><span class="rocket">🚀</span> Petit Bac</h1>
     <p>Trouve un mot par catégorie… avant les autres !</p>
+    <div class="theme-bar">
+      <span class="theme-chip on" data-theme="espace" title="Espace">🚀</span>
+      <span class="theme-chip" data-theme="jungle" title="Jungle">🌴</span>
+      <span class="theme-chip" data-theme="mer" title="Océan">🌊</span>
+      <span class="theme-chip" data-theme="bonbon" title="Bonbon">🍬</span>
+      <span class="theme-chip" data-theme="xp" title="Windows XP">🪟</span>
+      <button id="btn-mute" class="btn small ghost" style="margin-left:auto">🔊 Son on</button>
+    </div>
   </header>
 
   <!-- ACCUEIL -->
@@ -68,6 +76,7 @@
       <input id="opt-rounds" type="number" min="1" max="10" value="5">
     </label>
     <label class="field"><input id="opt-hard" type="checkbox" style="width:20px;height:20px;accent-color:#7c5cff"> 🤪 Lettres difficiles autorisées (K, W, X, Y, Z)</label>
+    <label class="field"><input id="opt-stop" type="checkbox" checked style="width:20px;height:20px;accent-color:#7c5cff"> 🛑 Mode « Stop » : le premier joueur qui a tout rempli arrête la manche pour tout le monde</label>
 
     <button id="btn-start-game" class="btn">👥 Aller au salon d'attente</button>
     <button id="btn-print" class="btn ghost">🖨️ Imprimer une grille A4</button>
@@ -77,11 +86,15 @@
   <section id="screen-lobby" class="screen card hidden">
     <h2>👨‍🚀👩‍🚀 Salon d'attente</h2>
     <p>Code : <span class="room-code" id="lobby-code" style="display:inline-block;font-size:1.6rem;padding:6px 14px;letter-spacing:5px">-----</span>
-       <button id="btn-copy-lobby" class="btn small ghost">📋 Copier le lien</button></p>
+       <button id="btn-copy-lobby" class="btn small ghost">📋 Copier le lien</button>
+       <button class="btn small secondary btn-share">📤 Partager l'invitation</button></p>
+    <div class="chat-box card" style="padding:10px;margin:8px 0"></div>
+    <div class="chat-send" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     <p class="hint" id="lobby-count"></p>
     <ul class="lobby-players" id="lobby-players"></ul>
     <p class="hint" id="waiting-note"></p>
     <button id="btn-launch" class="btn">🚀 Lancer la partie</button>
+    <button class="btn small secondary btn-share">📤 Partager l'invitation</button>
     <button id="btn-print-lobby" class="btn ghost">🖨️ Imprimer une grille A4</button>
   </section>
 
@@ -95,7 +108,10 @@
     <div class="card">
       <div id="answers-form"></div>
       <button id="btn-submit-answers" class="btn">✅ J'ai terminé !</button>
+      <button id="btn-stop-round" class="btn secondary">🛑 STOP — j'ai tout rempli !</button>
       <p class="hint" id="play-status"></p>
+      <div class="chat-box" style="max-height:120px;overflow-y:auto;margin:8px 0"></div>
+      <div class="chat-send" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       <button id="btn-print-play" class="btn ghost">🖨️ Grille papier</button>
       <button id="btn-quit" class="btn ghost">🚪 Quitter</button>
     </div>
@@ -147,6 +163,7 @@
 </main>
 
 <div id="print-sheet"></div>
+<div id="confetti"></div>
 
 <script src="vendor/peerjs.min.js"></script>
 <script src="assets/cats.js"></script>

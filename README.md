@@ -18,6 +18,7 @@ Ouvre simplement : **https://Seakluft.github.io/petitbac/**
 - **Vérification en deux niveaux** :
   - un dictionnaire général embarqué (~600 000 entrées : mots français complets + prénoms/noms + villes + pays) valide l'existence du mot ;
   - une **validation par catégorie** : chaque catégorie reconnue (Ville, Pays, Animal, Prénom, Fruit, Légume, Métier, Couleur, Objet, Aliment…) a sa propre liste (`assets/villes.txt` ~85 000 villes, `assets/pays.txt`, `assets/animaux.txt` ~3 200 animaux, `assets/prenoms.txt` ~200 000 prénoms, listes embarquées pour le reste). Exemple : « banane » dans **Ville** = hors catégorie (0 pt ou vote), « paris » dans **Ville** = OK ;
+  - listes dédiées aussi pour **Célébrité** (`celebrites.txt`) et **Film/Série** (`films.txt`)
   - les mots hors catégorie ou inconnus passent au **vote des joueurs** (👍/👎, majorité, égalité = refusé). **La manche ne passe aux scores que quand tous les joueurs ont voté.**
 - Timer optionnel (15–300 s, réglable) ou mode « sans timer » : la manche se termine quand tout le monde a fini.
 - Nombre de manches réglable (1–10), 2 à 10 joueurs.
@@ -37,7 +38,12 @@ Depuis l'écran de configuration ou le salon : bouton **🖨️ Imprimer une gri
 - Site statique pur (HTML/CSS/JS), zéro build, zéro serveur applicatif.
 - Multijoueur **WebRTC via PeerJS** (serveur de signalisation public gratuit de PeerJS) : l'hôte héberge la partie dans son navigateur, les joueurs se connectent directement entre eux par code de partie. Le code n'est jamais stocké nulle part.
 - Dictionnaire embarqué (`assets/dict.txt`, ~600 000 entrées : mots français complets + prénoms + noms de personnes + ~80 000 villes + pays/capitales).
-- Police Baloo 2 (Google Fonts), thème espace enfantin.
+- Police Baloo 2 (Google Fonts), **5 thèmes enfantins au choix** (🚀 espace, 🌴 jungle, 🌊 océan, 🍬 bonbon, 🪟 **Windows XP**) mémorisé localement
+- **Reconnexion** : fermer l'onglet puis rouvrir avec le même code + même prénom = on retrouve sa place, même en pleine manche
+- **Chat rapide** à boutons prédéfinis (🛑 Stop !, 👏 Bravo !…) dans le salon et pendant la manche
+- **Sons** générés en WebAudio (zéro fichier) + bouton muet 🔇, **confettis** sur le gagnant
+- **Partage natif** de l'invitation (Web Share API sur mobile, copie presse-papiers sinon)
+- Statut en direct : qui a terminé sa saisie pendant la manche
 - Logique de jeu testable en Node : `node tests/rules.test.js`.
 
 ## Fichiers

@@ -28,7 +28,19 @@
     const w = normalizeWord(word);
     if (!w) return false;
     if (dictSet.has(w)) return true;
+    const s = singularize(w);
+    if (s && s !== w && dictSet.has(s)) return true;
     return false;
+  }
+
+  // Pluriel -> singulier (règles simples, couvre l'essentiel en français)
+  function singularize(w) {
+    if (w.length < 4) return null;
+    if (w.endsWith('eaux')) return w.slice(0, -4) + 'eau';
+    if (w.endsWith('aux')) return w.slice(0, -3) + 'al';
+    if (w.endsWith('oux')) return w.slice(0, -3) + 'ou';
+    if (w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us') && !w.endsWith('is')) return w.slice(0, -1);
+    return null;
   }
 
   function autoValid(word, letter, dictSet) {
@@ -42,15 +54,22 @@
     if (!catKey || !catSets || !catSets[catKey]) return null;
     const w = normalizeWord(word);
     if (!w) return false;
-    return catSets[catKey].has(w) ? true : false;
+    if (catSets[catKey].has(w)) return true;
+    const s = singularize(w);
+    if (s && s !== w && catSets[catKey].has(s)) return true;
+    return false;
   }
 
   const HARD_LETTERS = ['k', 'w', 'x', 'y', 'z'];
   const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-  function pickLetter(rng, includeHard) {
+  function pickLetter(rng, includeHard, usedLetters) {
     rng = rng || Math.random;
-    const pool = includeHard ? LETTERS : LETTERS.filter(l => HARD_LETTERS.indexOf(l) === -1);
+    let pool = includeHard ? LETTERS : LETTERS.filter(l => HARD_LETTERS.indexOf(l) === -1);
+    if (usedLetters && usedLetters.size) {
+      const remaining = pool.filter(l => !usedLetters.has(l));
+      if (remaining.length) pool = remaining;
+    }
     return pool[Math.floor(rng() * pool.length)];
   }
 
@@ -143,6 +162,7 @@
 
   return {
     normalizeWord,
+    singularize,
     startsWithLetter,
     isInDictionary,
     autoValid,

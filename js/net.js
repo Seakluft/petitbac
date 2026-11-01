@@ -4,10 +4,14 @@ window.PBNet = (function () {
   const PREFIX = 'petitbac-v2-';
 
   function hostId(code) { return PREFIX + 'host-' + code; }
-  function guestId(code, name) {
-    const slug = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  function guestSlug(name) {
+    return String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 18) || 'joueur';
-    return PREFIX + 'guest-' + code + '-' + slug + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ID déterministe : même code + même prénom = même identité (reconnexion possible)
+  function guestId(code, name) {
+    return PREFIX + 'guest-' + code + '-' + guestSlug(name);
   }
 
   function createHost(code, handlers) {
@@ -59,5 +63,5 @@ window.PBNet = (function () {
     return api;
   }
 
-  return { createHost, joinAsGuest, hostId, PREFIX };
+  return { createHost, joinAsGuest, hostId, guestId, guestSlug, PREFIX };
 })();
