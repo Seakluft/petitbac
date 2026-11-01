@@ -72,6 +72,31 @@
     });
   }
 
+  // listes par catégorie chargées à la demande (une seule fois)
+  state.catSets = state.catSets || {};
+  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt' };
+  function loadCatSets(categories) {
+    const keys = categories.map(c => window.PB_CATS.catKey(c));
+    state.catKeys = keys;
+    const jobs = [];
+    keys.forEach(k => {
+      if (!k) return;
+      if (state.catSets[k]) return;
+      if (window.PB_CATS.CATS[k] && window.PB_CATS.CATS[k].length) {
+        state.catSets[k] = new Set(window.PB_CATS.CATS[k]);
+        return;
+      }
+      const f = CAT_FILES[k];
+      if (!f) return;
+      jobs.push(fetch(f).then(r => r.text()).then(txt => {
+        const s = new Set();
+        txt.split('\n').forEach(w => { if (w) s.add(w); });
+        state.catSets[k] = s;
+      }).catch(() => {}));
+    });
+    return Promise.all(jobs);
+  }
+
   // ---------- réseau ----------
   function send(msg) { if (state.net && !state.net.isHost) state.net.send(msg); }
   function bcast(msg) { if (state.net && state.net.isHost) state.net.broadcast(msg); }
@@ -369,6 +394,7 @@
     state.finishedFlags = {};
     if (state.role === 'host') { state.myVotesHost = {}; }
     stopTimer();
+    loadCatSets(state.categories);
     $('#play-round').textContent = 'Manche ' + roundNo + ' / ' + state.numRounds;
     $('#play-letter').textContent = letter;
     const timerEl = $('#play-timer');
@@ -412,9 +438,17 @@
     const v = inp.value.trim();
     if (!v) { chk.textContent = ''; chk.className = 'chk'; return; }
     if (!R.startsWithLetter(v, state.letter)) { chk.textContent = '❌ pas de « ' + state.letter.toUpperCase() + ' »'; chk.className = 'chk status-ko'; return; }
+    const key = state.catKeys ? state.catKeys[i] : null;
+    const catRes = R.categoryCheck(v, key, state.catSets);
+    if (catRes === false) { chk.textContent = '❌ hors catégorie « ' + state.categories[i] + ' »'; chk.className = 'chk status-ko'; return; }
     if (state.dict.size === 0) { chk.textContent = '❓'; chk.className = 'chk'; return; }
-    if (R.isInDictionary(v, state.dict)) { chk.textContent = '✅ mot connu'; chk.className = 'chk status-ok'; }
-    else { chk.textContent = '⚠️ inconnu du dictionnaire (sera voté)'; chk.className = 'chk status-ko'; }
+    if (R.isInDictionary(v, state.dict)) {
+      chk.textContent = catRes === true ? '✅ mot connu, bonne catégorie' : '✅ mot connu';
+      chk.className = 'chk status-ok';
+    } else {
+      chk.textContent = '⚠️ inconnu du dictionnaire (sera voté)';
+      chk.className = 'chk status-ko';
+    }
   }
 
   function updatePlayStatus() {
@@ -462,7 +496,7 @@
     state.phase = 'reveal';
     const entries = R.buildRoundEntries(
       state.players.map(p => ({ playerId: p.id, answers: state.answers[p.id] || [] })),
-      state.categories, state.letter, state.dict
+      state.categories, state.letter, state.dict, state.catSets, state.catKeys
     );
     state.entries = entries;
     bcast({ type: 'reveal', entries, round: state.round + 1 });
@@ -482,7 +516,11 @@
       row.style.marginBottom = '10px';
       const who = e.players.map(pid => { const p = state.players.find(x => x.id === pid); return p ? p.name : '?'; }).join(', ');
       const dupBadge = e.players.length >= 2 ? '<span class="badge dup">doublon ×' + e.players.length + ' → 1 pt</span>' : '';
-      const autoBadge = e.auto ? '<span class="badge auto">dictionnaire ✅</span>' : '<span class="badge rejected">hors dictionnaire → vote</span>';
+      let autoBadge;
+      if (e.catCheck === false) autoBadge = '<span class="badge rejected">❌ hors catégorie « ' + esc(e.category) + ' » → vote</span>';
+      else if (!e.letterOk) autoBadge = '<span class="badge rejected">❌ mauvaise lettre → vote</span>';
+      else if (e.auto) autoBadge = '<span class="badge auto">auto ✅' + (e.catCheck === true ? ' (catégorie ok)' : '') + '</span>';
+      else autoBadge = '<span class="badge rejected">hors dictionnaire → vote</span>';
       row.innerHTML =
         '<div style="font-weight:800">' + esc(e.category) + ' : « ' + esc(e.word) + ' »</div>' +
         '<div style="font-size:.85rem;color:#7a739e">' + esc(who) + dupBadge + autoBadge + '</div>' +

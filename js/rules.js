@@ -35,6 +35,16 @@
     return startsWithLetter(word, letter) && isInDictionary(word, dictSet);
   }
 
+  // Validation par catégorie : catKey = clé de la catégorie (voir assets/cats.js),
+  // catSets = { cle: Set(mots normalisés) } chargé à la demande.
+  // Retourne true (OK), false (hors catégorie), ou null (pas de liste pour cette catégorie -> vote).
+  function categoryCheck(word, catKey, catSets) {
+    if (!catKey || !catSets || !catSets[catKey]) return null;
+    const w = normalizeWord(word);
+    if (!w) return false;
+    return catSets[catKey].has(w) ? true : false;
+  }
+
   const HARD_LETTERS = ['k', 'w', 'x', 'y', 'z'];
   const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
@@ -52,15 +62,18 @@
     return out;
   }
 
-  function buildRoundEntries(playersAnswers, categories, letter, dictSet) {
+  function buildRoundEntries(playersAnswers, categories, letter, dictSet, catSets, catKeys) {
     const entries = [];
     categories.forEach((cat, ci) => {
+      const key = catKeys ? catKeys[ci] : null;
       const byWord = new Map();
       playersAnswers.forEach(pa => {
         const raw = (pa.answers && pa.answers[ci]) || '';
         const norm = normalizeWord(raw);
         if (!norm) return;
         if (!byWord.has(norm)) {
+          const dictOk = autoValid(raw, letter, dictSet);
+          const catOk = categoryCheck(raw, key, catSets);
           byWord.set(norm, {
             id: 'e' + entries.length + '_' + ci + '_' + norm,
             categoryIndex: ci,
@@ -68,7 +81,9 @@
             word: raw.trim(),
             norm: norm,
             players: [],
-            auto: autoValid(raw, letter, dictSet)
+            auto: dictOk && catOk !== false,
+            catCheck: catOk,
+            letterOk: startsWithLetter(raw, letter)
           });
         }
         byWord.get(norm).players.push(pa.playerId);
@@ -131,6 +146,7 @@
     startsWithLetter,
     isInDictionary,
     autoValid,
+    categoryCheck,
     pickLetter,
     genRoomCode,
     buildRoundEntries,

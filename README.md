@@ -15,7 +15,10 @@ Ouvre simplement : **https://Seakluft.github.io/petitbac/**
 - Chaque manche tire une **lettre au hasard** (K, W, X, Y, Z exclus sauf option « lettres difficiles »).
 - Chaque joueur remplit **une case par catégorie** avec un mot commençant par la lettre.
 - **Barème standard** : mot **unique** = **2 pts** ; mot **partagé** (doublon détecté automatiquement, insensible à la casse/accents) = **1 pt** ; case vide, hors sujet ou refusé = **0 pt**.
-- **Vérification** : un dictionnaire embarqué (~600 000 entrées : mots français complets + prénoms + noms de personnes + ~80 000 villes + pays et capitales) valide automatiquement les mots connus ; les mots inconnus passent au **vote des joueurs** (👍/👎, majorité, égalité = refusé). **La manche ne passe aux scores que quand tous les joueurs ont voté.**
+- **Vérification en deux niveaux** :
+  - un dictionnaire général embarqué (~600 000 entrées : mots français complets + prénoms/noms + villes + pays) valide l'existence du mot ;
+  - une **validation par catégorie** : chaque catégorie reconnue (Ville, Pays, Animal, Prénom, Fruit, Légume, Métier, Couleur, Objet, Aliment…) a sa propre liste (`assets/villes.txt` ~85 000 villes, `assets/pays.txt`, `assets/animaux.txt` ~3 200 animaux, `assets/prenoms.txt` ~200 000 prénoms, listes embarquées pour le reste). Exemple : « banane » dans **Ville** = hors catégorie (0 pt ou vote), « paris » dans **Ville** = OK ;
+  - les mots hors catégorie ou inconnus passent au **vote des joueurs** (👍/👎, majorité, égalité = refusé). **La manche ne passe aux scores que quand tous les joueurs ont voté.**
 - Timer optionnel (15–300 s, réglable) ou mode « sans timer » : la manche se termine quand tout le monde a fini.
 - Nombre de manches réglable (1–10), 2 à 10 joueurs.
 

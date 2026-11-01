@@ -84,6 +84,33 @@ t('genRoomCode : 5 caractères valides', () => {
   assert.ok(!/[OIL01]/.test(c));
 });
 
+t('categoryCheck : banane dans ville = hors catégorie, paris = ok, catégorie inconnue = vote (null)', () => {
+  const catSets = { ville: new Set(['paris', 'londres', 'katmandou']), animal: new Set(['lion', 'chien']) };
+  assert.strictEqual(R.categoryCheck('Banane', 'ville', catSets), false);
+  assert.strictEqual(R.categoryCheck('Paris', 'ville', catSets), true);
+  assert.strictEqual(R.categoryCheck('Lyon', 'ville', catSets), false);
+  assert.strictEqual(R.categoryCheck('Lion', 'animal', catSets), true);
+  assert.strictEqual(R.categoryCheck('Lion', 'ville', catSets), false);
+  assert.strictEqual(R.categoryCheck('Whatever', 'inconnue', catSets), null);
+  assert.strictEqual(R.categoryCheck('Whatever', null, catSets), null);
+});
+
+t('buildRoundEntries : hors catégorie marqué auto=false même si dans le dictionnaire', () => {
+  const catSets = { ville: new Set(['paris']) };
+  const catKeys = ['ville'];
+  const players = [
+    { playerId: 'a', answers: ['Paris'] },
+    { playerId: 'b', answers: ['Banane'] }
+  ];
+  const entries = R.buildRoundEntries(players, ['Ville'], 'p', new Set(['paris', 'banane']), catSets, catKeys);
+  const paris = entries.find(e => e.norm === 'paris');
+  const banane = entries.find(e => e.norm === 'banane');
+  assert.strictEqual(paris.auto, true);
+  assert.strictEqual(paris.catCheck, true);
+  assert.strictEqual(banane.auto, false);
+  assert.strictEqual(banane.catCheck, false);
+});
+
 t('totalScores additionne les manches', () => {
   const totals = R.totalScores([{ a: 2, b: 1 }, { a: 1, b: 2 }], ['a', 'b']);
   assert.deepStrictEqual(totals, { a: 3, b: 3 });
