@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1b1140">
 <title>🚀 Petit Bac — jeu de mots en ligne</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,124 +16,137 @@
 <main class="app">
   <header class="masthead">
     <h1><span class="rocket">🚀</span> Petit Bac</h1>
-    <p>Trouve un mot par catégorie… avant les autres !</p>
+    <p class="tagline">Un mot par catégorie, une lettre, et c'est parti !</p>
     <div class="theme-bar">
       <span class="theme-chip on" data-theme="espace" title="Espace">🚀</span>
       <span class="theme-chip" data-theme="jungle" title="Jungle">🌴</span>
       <span class="theme-chip" data-theme="mer" title="Océan">🌊</span>
       <span class="theme-chip" data-theme="bonbon" title="Bonbon">🍬</span>
       <span class="theme-chip" data-theme="xp" title="Windows XP">🪟</span>
-      <button id="btn-mute" class="btn small ghost" style="margin-left:auto">🔊 Son on</button>
+      <button id="btn-mute" class="btn small ghost" style="margin-left:auto">🔊</button>
     </div>
   </header>
 
   <!-- ACCUEIL -->
-  <section id="screen-home" class="screen card">
-    <h2>🏠 Créer une partie</h2>
-    <label class="field">Ton prénom
-      <input id="host-name" type="text" maxlength="16" placeholder="Ex : Léa" autocomplete="off">
-    </label>
-    <button id="btn-create" class="btn">🚀 Créer une partie</button>
-
-    <h2 style="margin-top:22px">🛰️ Rejoindre une partie</h2>
-    <label class="field">Ton prénom
-      <input id="guest-name" type="text" maxlength="16" placeholder="Ex : Tom" autocomplete="off">
-    </label>
-    <label class="field">Code de la partie (5 caractères)
-      <input id="room-code" type="text" maxlength="5" placeholder="Ex : K7XQM" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800">
-    </label>
-    <button id="btn-join" class="btn secondary">✨ Rejoindre</button>
+  <section id="screen-home" class="screen">
+    <div class="card home-card">
+      <label class="field">Ton prénom
+        <input id="home-name" type="text" maxlength="16" placeholder="Ex : Léa" autocomplete="off">
+      </label>
+      <button id="btn-create" class="btn big">🚀 Créer une partie</button>
+      <div class="divider"><span>ou</span></div>
+      <label class="field">Code de la partie
+        <input id="room-code" type="text" maxlength="5" placeholder="K7XQM" autocomplete="off" autocapitalize="characters" class="code-input">
+      </label>
+      <button id="btn-join" class="btn big secondary">✨ Rejoindre</button>
+      <button id="btn-howto" class="btn ghost small-link">❓ Règles en 30 secondes</button>
+    </div>
   </section>
 
   <!-- CHARGEMENT -->
   <section id="screen-loading" class="screen card hidden" style="text-align:center">
-    <p id="loading-text" style="font-size:1.2rem;font-weight:800">🚀 Préparation…</p>
+    <div class="spinner">🚀</div>
+    <p id="loading-text" style="font-size:1.2rem;font-weight:800">Préparation…</p>
   </section>
 
   <!-- CONFIGURATION (hôte) -->
   <section id="screen-setup" class="screen card hidden">
-    <h2>🎮 Configuration de la partie</h2>
-    <p>Code de la partie :</p>
+    <h2>🎮 Ta partie</h2>
+    <p class="hint">Donne ce code à tes amis :</p>
     <div class="room-code" id="setup-code">-----</div>
-    <p class="hint">Partage ce code ou le lien aux autres joueurs</p>
-    <div class="share-link" id="setup-link"></div>
-    <button id="btn-copy-link" class="btn small ghost">📋 Copier le lien d'invitation</button>
+    <div class="row-btns">
+      <button id="btn-copy-link" class="btn small ghost">📋 Lien</button>
+      <button class="btn small secondary btn-share">📤 Partager</button>
+    </div>
 
-    <h2 style="margin-top:18px">🪐 Choisis les catégories <span id="cat-count" style="font-size:.9rem"></span></h2>
+    <h2 style="margin-top:18px">🪐 Catégories <span id="cat-count" style="font-size:.9rem"></span></h2>
     <div class="cat-grid" id="cat-list"></div>
     <div class="add-row">
-      <input id="custom-cat-input" type="text" maxlength="24" placeholder="+ Ta catégorie perso (ex : Géographie)…">
-      <button id="btn-add-cat" class="btn small secondary" style="margin-top:0">Ajouter</button>
+      <input id="custom-cat-input" type="text" maxlength="24" placeholder="+ Ta catégorie (ex : Géographie)…">
+      <button id="btn-add-cat" class="btn small secondary" style="margin-top:0">+</button>
     </div>
-    <p class="hint">Une catégorie perso reconnue (Ville, Pays, Animal, Fruits & légumes, Géographie…) est vérifiée automatiquement ; les autres passent au vote. Un badge ✅/🗳️ s'affiche sur chaque catégorie ajoutée.</p>
     <div id="custom-cats" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
 
     <h2 style="margin-top:18px">⚙️ Options</h2>
-    <label class="field"><input id="opt-with-timer" type="checkbox" checked style="width:20px;height:20px;accent-color:#7c5cff"> ⏱️ Avec timer</label>
-    <label class="field">Durée du timer (secondes)
-      <input id="opt-timer" type="number" min="15" max="300" value="60">
-    </label>
-    <label class="field">Nombre de manches
-      <input id="opt-rounds" type="number" min="1" max="10" value="5">
-    </label>
-    <label class="field"><input id="opt-hard" type="checkbox" style="width:20px;height:20px;accent-color:#7c5cff"> 🤪 Lettres difficiles autorisées (K, W, X, Y, Z)</label>
-    <label class="field"><input id="opt-stop" type="checkbox" checked style="width:20px;height:20px;accent-color:#7c5cff"> 🛑 Mode « Stop » : le premier joueur qui a tout rempli arrête la manche pour tout le monde</label>
+    <label class="field"><input id="opt-with-timer" type="checkbox" checked> ⏱️ Avec timer
+      <input id="opt-timer" type="number" min="15" max="300" value="60" style="width:70px;display:inline-block"> s</label>
+    <label class="field"><input id="opt-rounds" type="number" min="1" max="10" value="5" style="width:70px;display:inline-block"> 🔄 manches</label>
+    <label class="field"><input id="opt-hard" type="checkbox"> 🤪 Lettres difficiles (K W X Y Z)</label>
+    <label class="field"><input id="opt-stop" type="checkbox" checked> 🛑 Mode « Stop » (le 1ᵉʳ qui a tout rempli arrête la manche)</label>
 
-    <button id="btn-start-game" class="btn">👥 Aller au salon d'attente</button>
+    <button id="btn-start-game" class="btn big">👥 Salon d'attente</button>
     <button id="btn-print" class="btn ghost">🖨️ Imprimer une grille A4</button>
   </section>
 
   <!-- SALON -->
   <section id="screen-lobby" class="screen card hidden">
-    <h2>👨‍🚀👩‍🚀 Salon d'attente</h2>
-    <p>Code : <span class="room-code" id="lobby-code" style="display:inline-block;font-size:1.6rem;padding:6px 14px;letter-spacing:5px">-----</span>
-       <button id="btn-copy-lobby" class="btn small ghost">📋 Copier le lien</button>
-       <button class="btn small secondary btn-share">📤 Partager l'invitation</button></p>
-    <div class="chat-box card" style="padding:10px;margin:8px 0"></div>
-    <div class="chat-send" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <h2>👨‍🚀 Salon</h2>
+    <div class="room-code" id="lobby-code">-----</div>
+    <div class="row-btns">
+      <button id="btn-copy-lobby" class="btn small ghost">📋 Lien</button>
+      <button class="btn small secondary btn-share">📤 Partager</button>
+    </div>
     <p class="hint" id="lobby-count"></p>
+    <p class="hint">Choisis ton avatar :</p>
+    <div class="avatar-grid" id="avatar-grid"></div>
     <ul class="lobby-players" id="lobby-players"></ul>
+    <div class="chat-box" style="max-height:110px;overflow-y:auto"></div>
+    <div class="chat-send" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0"></div>
     <p class="hint" id="waiting-note"></p>
-    <button id="btn-launch" class="btn">🚀 Lancer la partie</button>
-    <button class="btn small secondary btn-share">📤 Partager l'invitation</button>
-    <button id="btn-print-lobby" class="btn ghost">🖨️ Imprimer une grille A4</button>
+    <button id="btn-launch" class="btn big">🚀 Lancer la partie</button>
+    <button id="btn-print-lobby" class="btn ghost">🖨️ Grille A4</button>
   </section>
 
   <!-- MANCHE -->
   <section id="screen-play" class="screen hidden">
-    <div class="letter-banner">
-      <div class="sub" id="play-round">Manche 1</div>
-      <div class="big" id="play-letter">A</div>
-      <div class="timer" id="play-timer">⏱️ 60 s</div>
+    <div class="play-top">
+      <div class="progress-dots" id="progress-dots"></div>
+      <div class="letter-wrap">
+        <div class="big letter-pop" id="play-letter">A</div>
+        <div class="timer-ring-wrap">
+          <svg class="timer-ring" viewBox="0 0 44 44" id="timer-ring">
+            <circle class="ring-bg" cx="22" cy="22" r="19"></circle>
+            <circle class="ring-fg" id="ring-fg" cx="22" cy="22" r="19"></circle>
+          </svg>
+          <span class="timer-num" id="play-timer">60</span>
+        </div>
+      </div>
+      <div class="sub" id="play-round">Manche 1 / 5</div>
     </div>
-    <div class="card">
+    <div class="card answers-card">
       <div id="answers-form"></div>
-      <button id="btn-submit-answers" class="btn">✅ J'ai terminé !</button>
-      <button id="btn-stop-round" class="btn secondary">🛑 STOP — j'ai tout rempli !</button>
       <p class="hint" id="play-status"></p>
-      <div class="chat-box" style="max-height:120px;overflow-y:auto;margin:8px 0"></div>
+      <div class="chat-box" style="max-height:100px;overflow-y:auto;margin:8px 0"></div>
       <div class="chat-send" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-      <button id="btn-print-play" class="btn ghost">🖨️ Grille papier</button>
-      <button id="btn-quit" class="btn ghost">🚪 Quitter</button>
+    </div>
+    <div class="sticky-bar">
+      <button id="btn-stop-round" class="btn secondary">🛑 STOP</button>
+      <button id="btn-submit-answers" class="btn big">✅ J'ai terminé !</button>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button id="btn-print-play" class="btn ghost small-link">🖨️ Grille papier</button>
+      <button id="btn-quit" class="btn ghost small-link">🚪 Quitter</button>
     </div>
   </section>
 
   <!-- ATTENTE -->
   <section id="screen-waiting" class="screen card hidden" style="text-align:center">
-    <p id="waiting-text" style="font-size:1.2rem;font-weight:800">✨ En attente des autres joueurs…</p>
+    <div class="spinner">✨</div>
+    <p id="waiting-text" style="font-size:1.2rem;font-weight:800">En attente des autres joueurs…</p>
+    <p class="hint" id="waiting-status"></p>
   </section>
 
   <!-- VOTE -->
   <section id="screen-vote" class="screen hidden">
-    <div class="card">
-      <h2>🗳️ Validation des mots</h2>
+    <div class="card vote-head">
+      <h2>🗳️ On valide les mots</h2>
       <p class="hint" id="vote-round"></p>
-      <p class="hint">👍 = mot accepté • 👎 = refusé. Les mots « hors dictionnaire » ont besoin de ton vote. En cas d'égalité, le mot est refusé.</p>
+      <p class="hint">👍 = accepté • 👎 = refusé • égalité = refusé. On attend tout le monde !</p>
       <p class="hint" id="vote-progress" style="font-weight:800;color:var(--accent2)"></p>
     </div>
     <div id="vote-list"></div>
-    <div class="card">
-      <button id="btn-submit-votes" class="btn">📨 Envoyer mes votes</button>
+    <div class="sticky-bar">
+      <button id="btn-submit-votes" class="btn big">📨 Envoyer mes votes</button>
     </div>
   </section>
 
@@ -141,12 +154,12 @@
   <section id="screen-scores" class="screen hidden">
     <div class="card">
       <h2 id="scores-round">Résultats</h2>
+      <div id="podium"></div>
+      <div id="score-totals"></div>
       <div id="score-detail"></div>
     </div>
-    <div class="card">
-      <h2>🏆 Classement</h2>
-      <div id="score-totals"></div>
-      <button id="btn-next-round" class="btn">➡️ Manche suivante</button>
+    <div class="sticky-bar">
+      <button id="btn-next-round" class="btn big">➡️ Manche suivante</button>
     </div>
   </section>
 
@@ -154,14 +167,31 @@
   <section id="screen-final" class="screen card hidden" style="text-align:center">
     <h2>🏁 Partie terminée !</h2>
     <div id="final-winners"></div>
-    <div class="card" style="margin-top:14px">
-      <h2>🏆 Classement final</h2>
+    <div id="podium-final"></div>
+    <div class="card" style="margin-top:14px;text-align:left">
+      <h2>Classement final</h2>
       <div id="score-totals-final-list"></div>
     </div>
-    <button id="btn-again" class="btn">🔁 Rejouer</button>
-    <button id="btn-print" onclick="window.print()" class="btn ghost">🖨️ Imprimer une grille</button>
+    <button id="btn-again" class="btn big">🔁 Rejouer</button>
+    <button class="btn ghost btn-print-final">🖨️ Grille A4</button>
   </section>
 </main>
+
+<!-- MODAL RÈGLES -->
+<div id="modal-howto" class="modal hidden">
+  <div class="modal-card card">
+    <h2>❓ Règles en 30 secondes</h2>
+    <ol class="rules-list">
+      <li>🎲 Une <b>lettre</b> est tirée au hasard (ex : « M »).</li>
+      <li>✍️ Pour <b>chaque catégorie</b>, trouve un mot qui commence par cette lettre.</li>
+      <li>🛑 Le premier qui a tout rempli peut crier <b>Stop</b> (ou le timer arrête la manche).</li>
+      <li>🗳️ Tout le monde <b>vote</b> pour valider ou refuser les mots douteux.</li>
+      <li>⭐ <b>2 pts</b> si ton mot est unique, <b>1 pt</b> s'il est partagé, <b>0</b> sinon.</li>
+      <li>🏆 Le plus de points à la fin gagne !</li>
+    </ol>
+    <button id="btn-close-howto" class="btn big">C'est parti ! 🎉</button>
+  </div>
+</div>
 
 <div id="print-sheet"></div>
 <div id="confetti"></div>

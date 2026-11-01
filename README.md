@@ -38,6 +38,7 @@ Depuis l'écran de configuration ou le salon : bouton **🖨️ Imprimer une gri
 - Site statique pur (HTML/CSS/JS), zéro build, zéro serveur applicatif.
 - Multijoueur **WebRTC via PeerJS** (serveur de signalisation public gratuit de PeerJS) : l'hôte héberge la partie dans son navigateur, les joueurs se connectent directement entre eux par code de partie. Le code n'est jamais stocké nulle part.
 - Dictionnaire embarqué (`assets/dict.txt`, ~600 000 entrées : mots français complets + prénoms + noms de personnes + ~80 000 villes + pays/capitales).
+- Interface inspirée des meilleurs jeux casual mobiles (Wordle, Duolingo, StopotS) : **accueil en 1 champ** (prénom + créer/rejoindre), code de partie XXL, **boutons d'action fixes en bas** (pouce-friendly), lettre géante animée, **anneau de timer circulaire**, **points de progression des manches** ●●○○, **podium 🥇🥈🥉**, champs qui se colorent en direct (vert ✔ / jaune ❓), **modal « Règles en 30 secondes »**, sélecteur d'**avatar** au salon, vibrations mobiles, barre d'actions floutée
 - Police Baloo 2 (Google Fonts), **5 thèmes enfantins au choix** (🚀 espace, 🌴 jungle, 🌊 océan, 🍬 bonbon, 🪟 **Windows XP**) mémorisé localement
 - **Reconnexion** : fermer l'onglet puis rouvrir avec le même code + même prénom = on retrouve sa place, même en pleine manche
 - **Chat rapide** à boutons prédéfinis (🛑 Stop !, 👏 Bravo !…) dans le salon et pendant la manche

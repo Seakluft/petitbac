@@ -152,6 +152,11 @@
         bcast({ type: 'chat', from, text: String(msg.text || '').slice(0, 60) });
         break;
       }
+      case 'avatar': {
+        const p = state.players.find(x => x.id === from);
+        if (p) { p.avatar = String(msg.avatar || '🚀').slice(0, 4); bcast({ type: 'players', players: state.players }); renderLobby(); }
+        break;
+      }
       case 'vote': {
         state.myVotesHost = state.myVotesHost || {};
         state.myVotesHost[from] = msg.votes;
@@ -252,6 +257,11 @@
       case 'finished': {
         state.finishedFlags[msg.id] = true;
         updatePlayStatus();
+        const ws = $('#waiting-status');
+        if (ws && state.phase === 'playing') {
+          const n = state.players.filter(p => state.finishedFlags[p.id]).length;
+          ws.textContent = '🚀 ' + n + ' / ' + state.players.length + ' ont terminé';
+        }
         break;
       }
       case 'chat': {
@@ -276,14 +286,14 @@
   // ---------- écrans ----------
   function initHome() {
     $('#btn-create').addEventListener('click', () => {
-      const name = $('#host-name').value.trim() || 'Hôte';
+      const name = $('#home-name').value.trim() || 'Hôte';
       state.name = name.slice(0, 16);
       state.code = R.genRoomCode();
       state.role = 'host';
       openHost();
     });
     $('#btn-join').addEventListener('click', () => {
-      const name = $('#guest-name').value.trim() || 'Joueur';
+      const name = $('#home-name').value.trim() || 'Joueur';
       const code = $('#room-code').value.trim().toUpperCase();
       if (!/^[A-Z2-9]{5}$/.test(code)) { toast('⚠️ Code à 5 caractères (ex: K7XQM)'); return; }
       state.name = name.slice(0, 16);
@@ -293,6 +303,9 @@
     });
     const m = location.hash.match(/room=([A-Z2-9]{5})/i);
     if (m) { $('#room-code').value = m[1].toUpperCase(); toast('🔗 Code de partie détecté : ' + m[1].toUpperCase()); }
+    $('#btn-howto').addEventListener('click', () => $('#modal-howto').classList.remove('hidden'));
+    $('#btn-close-howto').addEventListener('click', () => $('#modal-howto').classList.add('hidden'));
+    $('#modal-howto').addEventListener('click', e => { if (e.target.id === 'modal-howto') e.target.classList.add('hidden'); });
   }
 
   function openHost() {
@@ -421,6 +434,23 @@
 
   // ---------- lobby ----------
   function renderLobby() {
+    const grid = $('#avatar-grid');
+    if (grid && !grid.children.length) {
+      D.avatars.forEach(av => {
+        const b = document.createElement('span');
+        b.className = 'avatar-pick' + (me() && me().avatar === av ? ' on' : '');
+        b.textContent = av;
+        b.addEventListener('click', () => {
+          const meNow = me();
+          if (meNow) { meNow.avatar = av; }
+          $$('.avatar-pick').forEach(x => x.classList.toggle('on', x.textContent === av));
+          sendOrBcast({ type: 'avatar', avatar: av });
+          if (state.role === 'host') bcast({ type: 'players', players: state.players });
+          else renderLobbyPlayersOnly();
+        });
+        grid.appendChild(b);
+      });
+    }
     const list = $('#lobby-players');
     list.innerHTML = '';
     state.players.forEach(p => {
@@ -437,6 +467,17 @@
     if (lbl) lbl.textContent = state.role === 'host'
       ? 'Partage le code ou le lien pour inviter des amis !'
       : 'En attente du lancement par l\'hôte…';
+  }
+
+  function renderLobbyPlayersOnly() {
+    const list = $('#lobby-players');
+    if (!list) return;
+    list.innerHTML = '';
+    state.players.forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="avatar">' + p.avatar + '</span> <span>' + esc(p.name) + '</span>' + (p.isHost ? '<span class="host-tag">HÔTE</span>' : '');
+      list.appendChild(li);
+    });
   }
 
   function initLobby() {
@@ -470,20 +511,27 @@
     if (state.role === 'host') { state.myVotesHost = {}; }
     stopTimer();
     loadCatSets(state.categories);
+    renderProgressDots(roundNo);
     $('#play-round').textContent = 'Manche ' + roundNo + ' / ' + state.numRounds;
-    $('#play-letter').textContent = letter;
+    const letterEl = $('#play-letter');
+    letterEl.textContent = letter;
+    letterEl.classList.remove('letter-pop');
+    void letterEl.offsetWidth;
+    letterEl.classList.add('letter-pop');
+    const ringWrap = document.querySelector('.timer-ring-wrap');
+    const ringFg = $('#ring-fg');
     const timerEl = $('#play-timer');
     if (state.withTimer) {
+      ringWrap.classList.add('show');
       state.timeLeft = state.timer;
-      timerEl.textContent = '⏱️ ' + state.timeLeft + ' s';
-      timerEl.classList.remove('hidden');
+      updateRing();
       state.timerId = setInterval(() => {
         state.timeLeft--;
-        timerEl.textContent = '⏱️ ' + Math.max(0, state.timeLeft) + ' s';
+        updateRing();
         if (state.timeLeft <= 0) endRoundByHost();
       }, 1000);
     } else {
-      timerEl.classList.add('hidden');
+      ringWrap.classList.remove('show');
     }
     renderAnswerForm();
     show('#screen-play');
@@ -511,18 +559,27 @@
     const i = parseInt(inp.dataset.i, 10);
     const chk = document.querySelector('.chk[data-i="' + i + '"]');
     const v = inp.value.trim();
+    inp.classList.remove('ok', 'warn', 'err');
     if (!v) { chk.textContent = ''; chk.className = 'chk'; return; }
-    if (!R.startsWithLetter(v, state.letter)) { chk.textContent = '❌ pas de « ' + state.letter.toUpperCase() + ' »'; chk.className = 'chk status-ko'; return; }
+    if (!R.startsWithLetter(v, state.letter)) {
+      chk.textContent = '✖️ pas de « ' + state.letter.toUpperCase() + ' »'; chk.className = 'chk status-ko';
+      inp.classList.add('err'); return;
+    }
     const key = state.catKeys ? state.catKeys[i] : null;
     const catRes = R.categoryCheck(v, key, state.catSets);
-    if (catRes === false) { chk.textContent = '❌ hors catégorie « ' + state.categories[i] + ' »'; chk.className = 'chk status-ko'; return; }
-    if (state.dict.size === 0) { chk.textContent = '❓'; chk.className = 'chk'; return; }
+    if (catRes === false) {
+      chk.textContent = '✖️ hors catégorie'; chk.className = 'chk status-ko';
+      inp.classList.add('err'); return;
+    }
+    if (state.dict.size === 0) { chk.textContent = '❓'; return; }
     if (R.isInDictionary(v, state.dict)) {
-      chk.textContent = catRes === true ? '✅ mot connu, bonne catégorie' : '✅ mot connu';
+      chk.textContent = catRes === true ? '✔' : '✔ mot connu';
       chk.className = 'chk status-ok';
+      inp.classList.add('ok');
     } else {
-      chk.textContent = '⚠️ inconnu du dictionnaire (sera voté)';
+      chk.textContent = '❓ sera voté';
       chk.className = 'chk status-ko';
+      inp.classList.add('warn');
     }
   }
 
@@ -559,10 +616,13 @@
     } else {
       send({ type: 'answers', answers });
       show('#screen-waiting');
-      $('#waiting-text').textContent = '✨ Tes réponses sont envoyées ! En attente des autres…';
+      $('#waiting-text').textContent = '✨ Tes réponses sont envoyées !';
+      $('#waiting-status').textContent = '';
     }
     updatePlayStatus();
   }
+
+  function buzz(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 
   function stopRound() {
     if (state.phase !== 'playing') return;
@@ -723,6 +783,7 @@
       });
     });
     renderTotals(totals);
+    renderPodium(totals, '#podium');
     const next = $('#btn-next-round');
     if (state.role === 'host') {
       next.classList.remove('hidden');
@@ -758,9 +819,28 @@
     });
   }
 
+  function renderPodium(totals, targetSel) {
+    const box = $(targetSel);
+    if (!box) return;
+    box.innerHTML = '';
+    const ranking = state.players.map(p => ({ p, pts: totals[p.id] || 0 })).sort((a, b) => b.pts - a.pts);
+    const top = ranking.slice(0, 3);
+    const medals = ['🥇', '🥈', '🥉'];
+    top.forEach((r, i) => {
+      const slot = document.createElement('div');
+      slot.className = 'podium-slot p' + (i + 1);
+      slot.innerHTML = '<div class="avatar">' + r.p.avatar + '</div>' +
+        '<div class="name">' + esc(r.p.name) + '</div>' +
+        '<div class="pts">' + r.pts + ' pts</div>' +
+        '<div class="bar">' + medals[i] + '</div>';
+      box.appendChild(slot);
+    });
+  }
+
   function showFinal(totals) {
     state.phase = 'final';
     renderTotals(totals, '#score-totals-final-list');
+    renderPodium(totals, '#podium-final');
     const box = $('#final-winners');
     box.innerHTML = '';
     const ranking = state.players.map(p => ({ p, pts: totals[p.id] || 0 })).sort((a, b) => b.pts - a.pts);
@@ -769,6 +849,7 @@
     box.innerHTML = winners.map(r => '<div style="font-size:1.4rem;font-weight:800">🏆 ' + esc(r.p.name) + ' — ' + r.pts + ' pts</div>').join('');
     sfx('win');
     confetti();
+    buzz([60, 60, 60, 60, 200]);
     const again = $('#btn-again');
     if (state.role === 'host') {
       again.classList.remove('hidden');
@@ -783,6 +864,28 @@
   }
 
   function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId = null; } }
+
+  const RING_LEN = 119.4;
+  function updateRing() {
+    const el = $('#play-timer');
+    const fg = $('#ring-fg');
+    if (!el || !fg) return;
+    el.textContent = Math.max(0, state.timeLeft);
+    const frac = state.timer > 0 ? Math.max(0, state.timeLeft / state.timer) : 0;
+    fg.style.strokeDashoffset = String(RING_LEN * (1 - frac));
+    fg.classList.toggle('low', state.timeLeft <= 10);
+  }
+
+  function renderProgressDots(roundNo) {
+    const box = $('#progress-dots');
+    if (!box) return;
+    box.innerHTML = '';
+    for (let i = 1; i <= state.numRounds; i++) {
+      const d = document.createElement('span');
+      d.className = 'dot' + (i < roundNo ? ' done' : i === roundNo ? ' current' : '');
+      box.appendChild(d);
+    }
+  }
 
   // ---------- impression ----------
   function buildPrintSheet() {
@@ -921,6 +1024,7 @@
       $('#btn-mute').textContent = muted ? '🔇 Son off' : '🔊 Son on';
     });
     $$('.btn-share').forEach(b => b.addEventListener('click', shareInvite));
+    $$('.btn-print-final').forEach(b => b.addEventListener('click', () => { buildPrintSheet(); window.print(); }));
     loadDict();
     show('#screen-home');
     sfx && setTimeout(() => sfx('start'), 300);
