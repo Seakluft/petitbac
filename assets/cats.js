@@ -24,35 +24,70 @@ window.PB_CATS = (function () {
     musique: ['guitare', 'piano', 'violon', 'batterie', 'basse', 'trompette', 'saxophone', 'flute', 'clarinette', 'harpe', 'accordeon', 'accordéon', 'synthetiseur', 'synthétiseur', 'violoncelle', 'alto', 'contrebasse', 'tambour', 'percussions', 'chant', 'chorale', 'opera', 'opéra', 'rap', 'rock', 'pop', 'jazz', 'blues', 'reggae', 'electro', 'électro', 'techno', 'house', 'rap', 'slam', 'classique']
   };
 
-  // alias de noms de catégories -> clé interne
+  // alias de noms de catégories -> clé interne OU tableau de clés (groupe de listes)
   const ALIAS = {
     'prénom': 'prenom', 'prenom': 'prenom', 'prénoms': 'prenom', 'prenoms': 'prenom',
     'nom de famille': 'prenom', 'nom': 'prenom',
     'animal': 'animal', 'animaux': 'animal',
     'fruit': 'fruit', 'fruits': 'fruit',
     'légume': 'legume', 'legume': 'legume', 'légumes': 'legume', 'legumes': 'legume',
-    'fruit ou légume': 'fruit', 'fruit ou légume': 'fruit', 'fruits ou légumes': 'fruit',
-    'ville': 'ville', 'villes': 'ville', 'ville ou pays': 'ville',
-    'pays': 'pays', 'ville ou pays': 'ville',
-    'objet': 'objet', 'objets': 'objet',
-    'métier': 'metier', 'metier': 'metier', 'métiers': 'metier', 'metiers': 'metier', 'profession': 'metier',
+    'fruit ou légume': ['fruit', 'legume'], 'fruits ou légumes': ['fruit', 'legume'],
+    'fruits & légumes': ['fruit', 'legume'], 'fruits et legumes': ['fruit', 'legume'],
+    'fruits & legumes': ['fruit', 'legume'],
+    'ville': 'ville', 'villes': 'ville',
+    'pays': 'pays',
+    'ville ou pays': ['ville', 'pays'],
+    'geographie (montagne, fleuve, mer…)': ['ville', 'pays', 'geographie'],
+    'géographie': 'geographie', 'geographie': 'geographie', 'geo': 'geographie',
+    'objet': 'objet', 'objets': 'objet', 'objet du quotidien': 'objet', 'objets du quotidien': 'objet',
+    'métier': 'metier', 'metier': 'metier', 'métiers': 'metier', 'metiers': 'metier', 'profession': 'metier', 'professions': 'metier',
     'couleur': 'couleur', 'couleurs': 'couleur',
-    'aliment': 'aliment', 'aliments': 'aliment', 'nourriture': 'aliment', 'aliment / boisson': 'aliment', 'boisson': 'aliment',
-    'célébrité': 'celebre', 'celebrite': 'celebre', 'célébrités': 'celebre', 'star': 'celebre', 'star ou personnage': 'celebre', 'personnage': 'celebre', 'personnage célèbre': 'celebre',
-    'film': 'film', 'films': 'film', 'film ou série': 'film', 'série': 'film', 'serie': 'film', 'film ou série': 'film',
+    'aliment': 'aliment', 'aliments': 'aliment', 'nourriture': 'aliment', 'aliment / boisson': 'aliment', 'aliment boisson': 'aliment', 'boisson': 'aliment',
+    'célébrité': 'celebre', 'celebrite': 'celebre', 'célébrités': 'celebre', 'celebrites': 'celebre',
+    'star': 'celebre', 'star ou personnage': 'celebre', 'personnage': 'celebre', 'personnage célèbre': 'celebre',
+    'célébrité / personnage': 'celebre', 'celebrite / personnage': 'celebre',
+    'film': 'film', 'films': 'film', 'film ou série': 'film', 'film ou serie': 'film', 'série': 'film', 'serie': 'film', 'series': 'film', 'films/séries': 'film',
+    'chanson': 'musique', 'chanson / groupe de musique': 'musique', 'groupe de musique': 'musique', 'musique': 'musique',
+    'jeu vidéo': 'film', 'jeu video': 'film', 'jeux vidéo': 'film', 'jeux video': 'film', 'jeu': 'film',
+    'livre': 'film', 'livres': 'film', 'littérature': 'film', 'litterature': 'film',
     'marque': 'marque', 'marques': 'marque',
     'sport': 'sport', 'sports': 'sport',
-    'instrument de musique': 'musique', 'instrument': 'musique', 'musique': 'musique'
+    'instrument de musique': 'musique', 'instrument': 'musique',
+    'véhicule': 'objet', 'vehicule': 'objet', 'voiture': 'objet',
+    'fromage': 'aliment', 'pâtisserie': 'aliment', 'patisserie': 'aliment',
+    'école (matière, objet…)': 'objet', 'ecole': 'objet', 'matière scolaire': 'objet',
+    'partie du corps': 'objet', 'corps': 'objet', 'corps du corps': 'objet',
+    'maladie': null, 'danse': null, 'fête': null, 'fête / célébration': null, 'celebration': null,
+    'monument célèbre': 'geographie', 'monument': 'geographie',
+    'expression': null, 'exclamation': null, 'parfum': null, 'odeur': null,
+    'insecte': 'animal', 'oiseau': 'animal', 'poisson': 'animal', 'coquillage': 'animal',
+    'poisson / coquillage': 'animal', 'océan': 'animal',
+    'plante': null, 'fleur': null, 'plante / fleur': null,
+    'métal': null, 'metaux': null, 'pierre précieuse': null, 'pierres précieuses': null,
+    'parc d\'attractions': null, 'parc': null,
+    'planète': 'geographie', 'planete': 'geographie', 'objet de l\'espace': 'geographie', 'planète / objet de l\'espace': 'geographie',
+    'dinosaure': 'animal', 'créature imaginaire': null, 'creature imaginaire': null,
+    'super-pouvoir': null, 'robot': null
   };
+
+  // clés de listes connues, proposées pour les catégories personnalisées
+  const KNOWN_LISTS = [
+    ['ville', 'Ville'], ['pays', 'Pays'], ['geographie', 'Géographie (montagnes, fleuves, mers…)'],
+    ['animal', 'Animal'], ['prenom', 'Prénom / nom'], ['fruit', 'Fruit'], ['legume', 'Légume'],
+    ['metier', 'Métier'], ['couleur', 'Couleur'], ['objet', 'Objet'], ['aliment', 'Aliment / boisson'],
+    ['celebre', 'Célébrité / personnage'], ['film', 'Film / série / livre / jeu']
+  ];
 
   function catKey(categoryLabel) {
     const n = norm(categoryLabel);
-    if (ALIAS[n]) return ALIAS[n];
-    for (const k of Object.keys(ALIAS)) {
+    if (Object.prototype.hasOwnProperty.call(ALIAS, n)) return ALIAS[n];
+    // correspondance par inclusion, la clé la plus longue d'abord (plus spécifique)
+    const keys = Object.keys(ALIAS).sort((a, b) => b.length - a.length);
+    for (const k of keys) {
       if (n.includes(k) || k.includes(n)) return ALIAS[k];
     }
     return null;
   }
 
-  return { CATS, catKey, norm };
+  return { CATS, ALIAS, KNOWN_LISTS, catKey, norm };
 })();

@@ -1,15 +1,13 @@
 window.PB_DATA = {
   presetCategories: [
-    'Prénom', 'Nom de famille', 'Animal', 'Ville', 'Pays', 'Fruit', 'Légume',
-    'Objet', 'Métier', 'Couleur', 'Aliment / Boisson', 'Célébrité',
-    'Marque', 'Sport', 'Instrument de musique', 'Véhicule', 'Film / Série',
-    'Chanson', 'Jeu vidéo', 'Livre', 'Plante / Fleur', 'Métal', 'Pierre précieuse',
-    'Océan (poisson, coquillage…)', 'Insecte', 'Oiseau', 'Fromage', 'Pâtisserie',
-    'École (matière, objet…)', 'Corps du corps', 'Maladie', 'Danse', 'Religion / Fête',
-    'Monument célèbre', 'Devise / Expression', 'Parfum / Odeur', 'Métro / Gare',
-    'Parc d\'attractions', 'Super-pouvoir', 'Mot d\'argot', 'Exclamation',
-    'Planète', 'Objet de l\'espace', 'Métier de l\'espace', 'Créature imaginaire',
-    'Contes (personnage…)', 'Magie (sortilège…)', 'Dinosaure', 'Pirate (objet…)', 'Chevalerie', 'Cow-boy (objet…)', 'Robot'
+    'Prénom', 'Nom de famille', 'Animal', 'Fruits & légumes', 'Aliment / Boisson',
+    'Objet du quotidien', 'Métier', 'Couleur', 'Ville', 'Pays', 'Géographie (montagne, fleuve, mer…)',
+    'Célébrité / Personnage', 'Film ou série', 'Chanson / Groupe de musique', 'Jeu vidéo', 'Livre',
+    'Marque', 'Sport', 'Instrument de musique', 'Véhicule', 'Fromage', 'Pâtisserie',
+    'École (matière, objet…)', 'Partie du corps', 'Maladie', 'Danse', 'Fête / Célébration',
+    'Monument célèbre', 'Expression / Exclamation', 'Parfum / Odeur', 'Insecte', 'Oiseau',
+    'Poisson / Coquillage', 'Plante / Fleur', 'Métal', 'Pierre précieuse', 'Parc d\'attractions',
+    'Planète / Objet de l\'espace', 'Dinosaure', 'Créature imaginaire', 'Super-pouvoir', 'Robot'
   ],
   avatars: ['🚀', '🛸', '👨‍🚀', '👩‍🚀', '🌙', '⭐', '☄️', '🪐', '👽', '🔭', '🌟', '🛰️'],
   defaultTimer: 60,

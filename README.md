@@ -25,8 +25,8 @@ Ouvre simplement : **https://Seakluft.github.io/petitbac/**
 
 ## Catégories
 
-- **Liste prédéfinie** (~48 catégories simples : Prénom, Animal, Ville, Pays, Fruit, Objet, Métier, Couleur…) dans laquelle l'hôte coche ce qu'il veut.
-- **Catégories personnalisées** ajoutables à la main.
+- **Liste prédéfinie** (~36 catégories regroupées et logiques : Prénom, Nom de famille, Animal, **Fruits & légumes**, Aliment/Boisson, Objet du quotidien, Métier, Couleur, **Ville**, **Pays**, **Géographie (montagne, fleuve, mer…)**, Célébrité/Personnage, Film ou série, Chanson/Groupe, Jeu vidéo, Livre, Marque, Sport, Instrument, Véhicule, Fromage, Pâtisserie, École, Partie du corps, Maladie, Danse, Fête, Monument, Expression, Parfum, Insecte, Oiseau, Poisson/Coquillage, Plante/Fleur, Métal, Pierre précieuse, Parc d'attractions, Planète/Objet de l'espace, Dinosaure, Créature imaginaire, Super-pouvoir, Robot) dans laquelle l'hôte coche ce qu'il veut.
+- **Catégories personnalisées** ajoutables à la main, avec **badge de vérification** : si le nom correspond à une liste connue (ex. tu crées « Géographie » → ville + pays + montagnes/fleuves/mers, « Fruits & légumes » → fruits + légumes), les mots sont vérifiés automatiquement (badge ✅) ; sinon ils passent au vote (badge 🗳️). Les **groupes multi-listes** sont supportés.
 - **Nombre de cases modifiable** : entre 3 et 15 catégories par manche.
 
 ## Version imprimable (PDF)

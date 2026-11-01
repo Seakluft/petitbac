@@ -141,6 +141,31 @@ t('pickLetter avec usedLetters ne rejoue pas une lettre', () => {
   assert.ok(R.LETTERS.includes(l));
 });
 
+t('categoryCheck avec groupe de listes (géographie = ville + pays + geo)', () => {
+  const catSets = {
+    ville: new Set(['paris']),
+    pays: new Set(['france']),
+    geographie: new Set(['mont blanc', 'amazone', 'mediterranee'])
+  };
+  const group = ['ville', 'pays', 'geographie'];
+  assert.strictEqual(R.categoryCheck('Paris', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('France', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('Mont Blanc', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('Méditerranée', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('Banane', group, catSets), false);
+  // groupe partiel : seule une liste connue -> check sur celle-là seulement
+  assert.strictEqual(R.categoryCheck('Paris', ['ville', 'inexistant'], catSets), true);
+  assert.strictEqual(R.categoryCheck('Banane', ['inexistant'], catSets), null);
+});
+
+t('categoryCheck fruits & légumes = fruit OU légume', () => {
+  const catSets = { fruit: new Set(['pomme', 'banane']), legume: new Set(['carotte']) };
+  const group = ['fruit', 'legume'];
+  assert.strictEqual(R.categoryCheck('Pomme', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('Carotte', group, catSets), true);
+  assert.strictEqual(R.categoryCheck('Paris', group, catSets), false);
+});
+
 t('totalScores additionne les manches', () => {
   const totals = R.totalScores([{ a: 2, b: 1 }, { a: 1, b: 2 }], ['a', 'b']);
   assert.deepStrictEqual(totals, { a: 3, b: 3 });

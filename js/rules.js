@@ -47,16 +47,21 @@
     return startsWithLetter(word, letter) && isInDictionary(word, dictSet);
   }
 
-  // Validation par catégorie : catKey = clé de la catégorie (voir assets/cats.js),
+  // Validation par catégorie : catKeys = clé OU tableau de clés (groupe de listes),
   // catSets = { cle: Set(mots normalisés) } chargé à la demande.
-  // Retourne true (OK), false (hors catégorie), ou null (pas de liste pour cette catégorie -> vote).
-  function categoryCheck(word, catKey, catSets) {
-    if (!catKey || !catSets || !catSets[catKey]) return null;
+  // true = dans au moins une liste du groupe, false = listes connues mais mot hors de toutes,
+  // null = aucune liste connue pour cette catégorie -> vote des joueurs.
+  function categoryCheck(word, catKeys, catSets) {
+    const keys = Array.isArray(catKeys) ? catKeys : (catKeys ? [catKeys] : []);
+    const known = keys.filter(k => catSets && catSets[k]);
+    if (!known.length) return null;
     const w = normalizeWord(word);
     if (!w) return false;
-    if (catSets[catKey].has(w)) return true;
     const s = singularize(w);
-    if (s && s !== w && catSets[catKey].has(s)) return true;
+    for (const k of known) {
+      if (catSets[k].has(w)) return true;
+      if (s && s !== w && catSets[k].has(s)) return true;
+    }
     return false;
   }
 

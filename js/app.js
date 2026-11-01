@@ -76,25 +76,30 @@
 
   // listes par catégorie chargées à la demande (une seule fois)
   state.catSets = state.catSets || {};
-  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt' };
+  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt', geographie: 'assets/geographie.txt' };
+  function flattenKeys(k) { return Array.isArray(k) ? k : (k ? [k] : []); }
   function loadCatSets(categories) {
-    const keys = categories.map(c => window.PB_CATS.catKey(c));
+    const keys = state.catKeys && state.catKeys.length === categories.length
+      ? state.catKeys
+      : categories.map(c => window.PB_CATS.catKey(c));
     state.catKeys = keys;
     const jobs = [];
     keys.forEach(k => {
-      if (!k) return;
-      if (state.catSets[k]) return;
-      if (window.PB_CATS.CATS[k] && window.PB_CATS.CATS[k].length) {
-        state.catSets[k] = new Set(window.PB_CATS.CATS[k]);
-        return;
-      }
-      const f = CAT_FILES[k];
-      if (!f) return;
-      jobs.push(fetch(f).then(r => r.text()).then(txt => {
-        const s = new Set();
-        txt.split('\n').forEach(w => { if (w) s.add(w); });
-        state.catSets[k] = s;
-      }).catch(() => {}));
+      flattenKeys(k).forEach(single => {
+        if (!single) return;
+        if (state.catSets[single]) return;
+        if (window.PB_CATS.CATS[single] && window.PB_CATS.CATS[single].length) {
+          state.catSets[single] = new Set(window.PB_CATS.CATS[single]);
+          return;
+        }
+        const f = CAT_FILES[single];
+        if (!f) return;
+        jobs.push(fetch(f).then(r => r.text()).then(txt => {
+          const s = new Set();
+          txt.split('\n').forEach(w => { if (w) s.add(w); });
+          state.catSets[single] = s;
+        }).catch(() => {}));
+      });
     });
     return Promise.all(jobs);
   }
@@ -350,6 +355,13 @@
     return presets.concat(custom);
   }
 
+  // groupes personnalisés : pour chaque catégorie perso, choix des listes de vérification
+  function selectedCatKeys() {
+    const presetKeys = $$('#cat-list .cat-chip input:checked').map(cb => window.PB_CATS.catKey(cb.parentElement.querySelector('span').textContent));
+    const customKeys = $$('#custom-cats .custom-cat').map(el => (el.dataset.keys || '').split(',').filter(Boolean));
+    return presetKeys.concat(customKeys);
+  }
+
   function updateCatCount() {
     const n = selectedCats().length;
     const el = $('#cat-count');
@@ -367,7 +379,13 @@
       const chip = document.createElement('span');
       chip.className = 'cat-chip on custom-cat';
       chip.dataset.cat = v.slice(0, 24);
-      chip.innerHTML = '<span>' + esc(v.slice(0, 24)) + '</span> <button type="button" class="btn small ghost" style="padding:2px 8px">✕</button>';
+      const key = window.PB_CATS.catKey(v);
+      const keys = Array.isArray(key) ? key : (key ? [key] : []);
+      chip.dataset.keys = keys.join(',');
+      const known = keys.length ? window.PB_CATS.KNOWN_LISTS.filter(([k]) => keys.includes(k)).map(([, lbl]) => lbl) : [];
+      chip.innerHTML = '<span>' + esc(v.slice(0, 24)) + '</span>' +
+        (known.length ? ' <span class="badge auto" title="Vérification : ' + esc(known.join(' + ')) + '">✅ ' + esc(known.join('+')) + '</span>' : ' <span class="badge" style="background:#eee;color:#666" title="Pas de liste connue : les mots passeront au vote">🗳️ vote</span>') +
+        ' <button type="button" class="btn small ghost" style="padding:2px 8px">✕</button>';
       chip.querySelector('button').addEventListener('click', () => { chip.remove(); updateCatCount(); });
       $('#custom-cats').appendChild(chip);
       inp.value = '';
@@ -393,6 +411,7 @@
 
   function applyLocalSettings() {
     state.categories = selectedCats();
+    state.catKeys = selectedCatKeys();
     state.timer = Math.max(15, Math.min(300, parseInt($('#opt-timer').value, 10) || D.defaultTimer));
     state.withTimer = $('#opt-with-timer').checked;
     state.hardLetters = $('#opt-hard').checked;

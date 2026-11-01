@@ -1,0 +1,120 @@
+aconcagua
+alpes
+amazone
+andes
+angel falls
+antactique
+apennins
+arctique
+atacama
+atlantique
+atlas
+baikal
+canal de panama
+canal de suez
+caraibes
+caspienne
+caucase
+chutes du niagara
+chutes victoria
+chypre
+congo
+corse
+crete
+danube
+desert du sahara
+detroit de gibraltar
+elbrouz
+etna
+euphrate
+everest
+fjords de norvege
+fuji
+gange
+ganges
+garonne
+gobi
+golfe du mexique
+golfe persique
+grand canyon
+grand lac sale
+grande barriere de corail
+great barrier reef
+groenland
+guadeloupe
+hawaii
+himalaya
+ile de france
+ile de paques
+ile maurice
+islande
+k2
+kalahari
+kilimandjaro
+krakatoa
+lac baikal
+lac de geneve
+lac huron
+lac leman
+lac michigan
+lac superior
+lac titicaca
+lac victoria
+loire
+madagascar
+malte
+manche
+martinique
+mediterranee
+mekong
+mer caspienne
+mer de chine
+mer des caraibes
+mer mediterranee
+mer morte
+mer noire
+mer rouge
+mississippi
+mont blanc
+mont everest
+mont pelee
+mont saint michel
+mont sinabung
+mont ventoux
+monts darree
+monts doree
+niagara
+niger
+nil
+nouvelle caledonie
+ocean antarctique
+ocean arctique
+ocean atlantique
+ocean indien
+ocean pacifique
+orange river
+pacifique
+pinatubo
+popocatepetl
+puy de dome
+pyrenees
+reunion
+rhin
+rhone
+rocheuses
+sahara
+sardaigne
+seine
+sicile
+st helens
+thames
+tiber
+tibre
+vesuve
+victoria falls
+volcan krakatoa
+volga
+yangtse
+yangtze
+yosemite
+zambeze
