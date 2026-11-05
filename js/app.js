@@ -160,7 +160,12 @@
         break;
       }
       case 'stop': {
-        if (state.stopMode) endRoundByHost();
+        if (state.phase !== 'playing') break;
+        if (state.stopMode) {
+          const p = state.players.find(x => x.id === from);
+          toast('🛑 ' + (p ? p.name : 'Un joueur') + ' a stoppé la manche !');
+          endRoundByHost();
+        }
         break;
       }
       case 'chat': {
@@ -668,9 +673,10 @@
   }
 
   function submitAnswers() {
-    if (state.phase !== 'playing') return;
+    if (state.phase !== 'playing') { toast('⏳ La manche est déjà terminée'); return; }
     stopTimer();
     const answers = collectMyAnswers();
+    netlog('↗', { type: 'answers', answers });
     if (state.role === 'host') {
       state.answers[myId()] = answers;
       state.finishedFlags[myId()] = true;
@@ -1124,7 +1130,7 @@
       'catSets: ' + (catInfo || 'aucune') + '  dict=' + state.dict.size + ' entrées',
       'finishedFlags: ' + JSON.stringify(state.finishedFlags),
       'votesHost: ' + Object.keys(state.myVotesHost || {}).length + '/' + state.players.length + '  myVotes=' + JSON.stringify(state.myVotes || {}),
-      'réponses: ' + (answersInfo || '-'),
+      'réponses: ' + (answersInfo || '-') + '  [mes champs: ' + [...document.querySelectorAll('#answers-form input')].map(i => JSON.stringify(i.value)).join(',') + ']',
       'entrées manche: ' + (entriesInfo || '-'),
       'totaux: ' + JSON.stringify(state.totals || {}),
       'écran visible: ' + (([...document.querySelectorAll('.screen')].find(e => !e.classList.contains('hidden')) || {}).id || '-') + '  voteList=' + document.querySelectorAll('#vote-list > *').length + ' rows  playForm=' + document.querySelectorAll('#answers-form input').length + ' champs',

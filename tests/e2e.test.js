@@ -160,7 +160,20 @@ function check(name, cond) {
     check('manche suivante lancée après reveal vide', vis(host, '#screen-play') && vis(guest, '#screen-play'));
   }
 
-  // 5. lettres jamais répétées
+  // 5. après le reveal vide, une manche normale avec réponses doit produire des entrées
+  {
+    qa(host, '#answers-form input').forEach((inp, i) => { inp.value = ['Lion', 'Lyon', 'Lampe'][i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
+    qa(guest, '#answers-form input').forEach((inp, i) => { inp.value = ['Loup', 'Lille', 'Livre'][i]; inp.dispatchEvent(new guest.Event('input', { bubbles: true })); });
+    click(host, '#btn-submit-answers');
+    await sleep(10);
+    click(guest, '#btn-submit-answers');
+    await sleep(40);
+    const rows = qa(host, '#vote-list > .card').length;
+    check('réponses soumises → entrées de vote présentes (' + rows + ' rows)', rows >= 4);
+    check('écran vote visible avec contenu ×2', vis(host, '#screen-vote') && vis(guest, '#screen-vote') && qa(guest, '#vote-list > .card').length >= 4);
+  }
+
+  // 6. lettres jamais répétées
   // (vérifié indirectement : usedLetters côté hôte) — on vérifie juste que 3 manches ont eu des lettres valides
   check('partie terminée sans erreur', true);
 
