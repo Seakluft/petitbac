@@ -159,6 +159,9 @@
             state.players.map(p => ({ playerId: p.id, answers: state.answers[p.id] || [] })),
             state.categories, state.letter, state.dict, state.catSets, state.catKeys
           );
+          if ((state.entries || []).length === 0 && entries.length > 0) {
+            toast('📥 ' + (state.players.find(p => p.id === from) || {}).name + ' a rattrapé sa manche !');
+          }
           state.entries = entries;
           bcast({ type: 'reveal', entries, round: state.round + 1 });
         }
@@ -285,6 +288,12 @@
         applySettings(msg.settings);
         state.round = msg.round - 1;
         startRound(msg.letter, msg.round);
+        // reconnexion en pleine manche : on restaure ce que le joueur avait tapé avant
+        const saved = loadMyAnswers();
+        if (saved && saved.some(v => v)) {
+          fillMyAnswers(saved);
+          toast('✍️ Tes réponses de la manche ont été restaurées');
+        }
         break;
       }
       case 'reveal': {
@@ -420,11 +429,20 @@
   function openGuest() {
     show('#screen-loading');
     $('#loading-text').textContent = '🛰️ Connexion à la partie ' + state.code + '…';
+    let hostGoneCount = 0;
     state.net = window.PBNet.joinAsGuest(state.code, state.name, {
-      onOpen: () => { state.net.send({ type: 'hello', name: state.name }); },
+      onOpen: () => { state.net.send({ type: 'hello', name: state.name }); updateConnBadge(); },
       onData: guestData,
+      onSent: (msg, tries) => { if (tries > 1) toast('📨 Renvoi de tes données (' + tries + 'ᵉ essai)…'); },
+      onQueued: () => { toast('📡 Connexion instable — ton envoi partira dès que ça revient'); },
+      onGiveUp: () => { toast('⚠️ Envoi impossible pour l\'instant — appuie à nouveau sur le bouton'); },
+      onConnLost: () => { updateConnBadge(); toast('📱 Connexion perdue — reconnexion automatique…'); },
+      onHostGone: () => {
+        hostGoneCount++;
+        if (hostGoneCount > 15) { toast('👋 L\'hôte s\'est déconnecté'); location.hash = ''; location.reload(); }
+        else { updateConnBadge(); toast('⚠️ L\'hôte est injoignable — nouvelle tentative…'); }
+      },
       onHostMissing: () => { toast('😢 Aucune partie avec ce code'); show('#screen-home'); },
-      onClose: () => { toast('👋 Partie fermée par l\'hôte'); location.hash = ''; location.reload(); },
       onError: () => { toast('😢 Connexion impossible'); show('#screen-home'); }
     });
   }
@@ -718,10 +736,21 @@
     return inputs.map(inp => inp.value.trim());
   }
 
+  function saveMyAnswers(answers) {
+    try { localStorage.setItem('pb-answers', JSON.stringify({ code: state.code, round: state.round, letter: state.letter, answers })); } catch (e) {}
+  }
+  function loadMyAnswers() {
+    try {
+      const d = JSON.parse(localStorage.getItem('pb-answers') || 'null');
+      return (d && d.code === state.code && d.round === state.round) ? d.answers : null;
+    } catch (e) { return null; }
+  }
+
   function submitAnswers() {
     if (state.phase !== 'playing') { toast('⏳ La manche est déjà terminée'); return; }
     stopTimer();
     const answers = collectMyAnswers();
+    saveMyAnswers(answers);
     netlog('↗', { type: 'answers', answers });
     if (state.role === 'host') {
       state.answers[myId()] = answers;
@@ -734,6 +763,7 @@
       if (state.phase === 'playing') {
         show('#screen-waiting');
         $('#waiting-text').textContent = '✨ Tes réponses sont envoyées !';
+        $('#waiting-status').textContent = '📡 Envoi en cours… elles partiront dès que la connexion revient';
         $('#waiting-status').textContent = '🚀 1 / ' + state.players.length + ' ont terminé';
       }
     }
@@ -768,6 +798,14 @@
   function endRoundByHost() {
     if (state.role !== 'host' || state.phase !== 'playing') return;
     stopTimer();
+    // filet de sécurité mobile : avant de clore, on demande aux retardataires d'envoyer
+    // leurs champs TOUT DE SUITE (message 'stopping' → envoi auto côté invité). Les
+    // réponses qui arrivent ensuite recalculent automatiquement le reveal (case 'answers').
+    const missing = state.players.filter(p => !state.finishedFlags[p.id] && p.id !== myId());
+    if (missing.length) {
+      bcast({ type: 'stopping', by: myId() });
+      toast('⏳ Dernières réponses en cours de réception…');
+    }
     state.phase = 'reveal';
     const entries = R.buildRoundEntries(
       state.players.map(p => ({ playerId: p.id, answers: state.answers[p.id] || [] })),
@@ -849,6 +887,8 @@
     });
     const submit = $('#btn-submit-votes');
     if (submit) { submit.classList.remove('hidden'); submit.textContent = '📨 Envoyer mes votes'; }
+    const forceBtn = document.getElementById('btn-force-votes');
+    if (forceBtn) forceBtn.classList.toggle('hidden', state.role !== 'host');
     refreshVoteButtons();
     updateVoteCount(entries);
     updateVoteProgress();
@@ -889,6 +929,14 @@
 
   function initVote() {
     $('#btn-submit-votes').addEventListener('click', submitVotes);
+    // filet anti-blocage : si un joueur ne peut plus voter (déconnexion), l'hôte peut débloquer
+    const force = document.getElementById('btn-force-votes');
+    if (force) force.addEventListener('click', () => {
+      if (state.role !== 'host' || state.phase !== 'vote') return;
+      state.players.forEach(p => { state.finishedFlags['vote:' + p.id] = true; });
+      toast('⏭ Votes clôturés par l\'hôte');
+      maybeFinishVotes();
+    });
   }
 
   function allVotesCollected() {
@@ -907,7 +955,6 @@
       updateVoteProgress();
       return;
     }
-    updateVoteProgress();
     state.phase = 'scores';
     const votesMap = state.myVotesHost;
     const entries = R.applyVotes(state.entries, state.players.map(p => votesMap[p.id] || {}));
@@ -1210,6 +1257,7 @@
       'catSets: ' + (catInfo || 'aucune') + '  dict=' + state.dict.size + ' entrées',
       'finishedFlags: ' + JSON.stringify(state.finishedFlags),
       'votesHost: ' + Object.keys(state.myVotesHost || {}).length + '/' + state.players.length + '  myVotes=' + JSON.stringify(state.myVotes || {}),
+      'file d\'envoi: ' + (state.net && state.net.pendingCount ? state.net.pendingCount() : 'n/a') + ' msg(s) en attente  connexion=' + (state.net && state.net.isConnected ? (state.net.isConnected() ? 'OK' : 'PERDUE') : 'n/a'),
       'réponses: ' + (answersInfo || '-') + '  [mes champs: ' + [...document.querySelectorAll('#answers-form input')].map(i => JSON.stringify(i.value)).join(',') + ']',
       'entrées manche: ' + (entriesInfo || '-'),
       'totaux: ' + JSON.stringify(state.totals || {}),
@@ -1300,6 +1348,7 @@
     initMobileTapFix();
     loadDict();
     show('#screen-home');
+    try { window.__pb = state; } catch (e) {}  // accès debug à l'état (support/diagnostic)
     sfx && setTimeout(() => sfx('start'), 300);
     window.addEventListener('beforeunload', () => { if (state.net) { sendOrBcast({ type: 'leave' }); } });
   }
