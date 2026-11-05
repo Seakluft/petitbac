@@ -81,4 +81,4 @@ docs: livraison directe sur main
 
 ## Debug
 
-Ajouter `?debug=1` à l'URL (ex. `https://seakluft.github.io/petitbac/?debug=1`) affiche un overlay permanent : phase, manche, lettre, timer, rôle, état PeerJS, joueurs offline, `finishedFlags`, votes reçus, et journal des 30 derniers messages réseau ↗/↙.
+L'overlay debug est **affiché par défaut** (désactivable avec `?debug=0`, ex. `https://seakluft.github.io/petitbac/?debug=0`) : phase, manche, lettre, timer, rôle, état PeerJS, joueurs offline, `finishedFlags`, votes reçus, et journal des 30 derniers messages réseau ↗/↙.

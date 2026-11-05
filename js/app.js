@@ -1107,7 +1107,8 @@
       NETLOG.slice(-10).map(l => new Date(l.t).toLocaleTimeString() + ' ' + l.dir + ' ' + l.type + (l.from ? ' ' + l.from : '')).join('\n');
   }
   function initDebug() {
-    if (!/[?&]debug=1/.test(location.search)) return;
+    // debug par défaut (peut être désactivé avec ?debug=0)
+    if (/[?&]debug=0/.test(location.search)) return;
     window.__debugOn = true;
     renderDebug();
     setInterval(renderDebug, 500);
