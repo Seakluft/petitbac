@@ -151,7 +151,17 @@
         state.answers[from] = msg.answers;
         state.finishedFlags[from] = true;
         bcast({ type: 'finished', id: from, players: state.players });
-        maybeEndRound();
+        if (state.phase === 'playing') {
+          maybeEndRound();
+        } else if (state.phase === 'reveal' || state.phase === 'vote') {
+          // réponse tardive (STOP arrivé avant) : on recalcule et on renvoie le reveal
+          const entries = R.buildRoundEntries(
+            state.players.map(p => ({ playerId: p.id, answers: state.answers[p.id] || [] })),
+            state.categories, state.letter, state.dict, state.catSets, state.catKeys
+          );
+          state.entries = entries;
+          bcast({ type: 'reveal', entries, round: state.round + 1 });
+        }
         break;
       }
       case 'vote-sent': {
@@ -159,11 +169,13 @@
         maybeFinishVotes();
         break;
       }
+      case 'stopping': break;
       case 'stop': {
         if (state.phase !== 'playing') break;
         if (state.stopMode) {
           const p = state.players.find(x => x.id === from);
           toast('🛑 ' + (p ? p.name : 'Un joueur') + ' a stoppé la manche !');
+          bcast({ type: 'stopping', by: from });
           endRoundByHost();
         }
         break;
@@ -276,11 +288,18 @@
       }
       case 'reveal': {
         stopTimer();
+        // réponse tardive : si je n'ai pas encore soumis, j'envoie mes champs actuels maintenant
+        if (!state.finishedFlags[myId()]) {
+          const answers = collectMyAnswers();
+          netlog('↗', { type: 'answers(late)', answers });
+          send({ type: 'answers', answers });
+          state.finishedFlags[myId()] = true;
+        }
+        const keepVotes = state.phase === 'vote' ? (state.myVotes || {}) : null;
         state.entries = msg.entries || [];
         state.round = msg.round - 1;
-        state.myVotes = state.myVotes || {};
         state.phase = 'vote';
-        showReveal(msg.entries);
+        showReveal(state.entries, keepVotes);
         break;
       }
       case 'rejoin-play': {
@@ -314,6 +333,16 @@
       }
       case 'vote-progress': updateVoteProgress(); break;
       case 'vote-ack': toast('🗳️ L\'hôte a bien reçu tes votes'); break;
+      case 'stopping': {
+        toast('🛑 Stop ! Tes réponses partent maintenant');
+        if (!state.finishedFlags[myId()]) {
+          const answers = collectMyAnswers();
+          netlog('↗', { type: 'answers(on-stop)', answers });
+          send({ type: 'answers', answers });
+          state.finishedFlags[myId()] = true;
+        }
+        break;
+      }
       case 'kicked': toast('👋 L\'hôte a fermé la partie'); location.hash = ''; location.reload(); break;
     }
   }
@@ -698,9 +727,10 @@
 
   function stopRound() {
     if (state.phase !== 'playing') return;
-    if (state.role === 'host') endRoundByHost();
-    else send({ type: 'stop' });
-    toast('🛑 Stop ! La manche s\'arrête.');
+    if (state.role === 'host') { bcast({ type: 'stopping', by: myId() }); endRoundByHost(); }
+    else { send({ type: 'stop' }); }
+    buzz(80);
+    toast('🛑 Stop ! La manche s\'arrête — dernières réponses !');
   }
 
   function maybeEndRound() {
@@ -724,9 +754,15 @@
   }
 
   // ---------- révélation + vote ----------
-  function showReveal(entries) {
+  function showReveal(entries, keepVotes) {
     state.phase = 'vote';
-    state.myVotes = state.myVotes || {};
+    if (keepVotes) {
+      state.myVotes = {};
+      const ids = new Set(entries.map(e => e.id));
+      Object.keys(keepVotes).forEach(k => { if (ids.has(k)) state.myVotes[k] = keepVotes[k]; });
+    } else {
+      state.myVotes = state.myVotes || {};
+    }
     const box = $('#vote-list');
     box.innerHTML = '';
     if (!entries.length) {

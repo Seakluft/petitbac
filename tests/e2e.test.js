@@ -173,7 +173,28 @@ function check(name, cond) {
     check('écran vote visible avec contenu ×2', vis(host, '#screen-vote') && vis(guest, '#screen-vote') && qa(guest, '#vote-list > .card').length >= 4);
   }
 
-  // 6. lettres jamais répétées
+  // 6. RÉPONSES TARDIVES : guest remplit mais ne soumet PAS ; l'hôte STOPpe → au reveal le guest envoie auto → reveal recalculé
+  {
+    // on repart d'une manche propre : si on est en vote/scores/final, passer à la manche suivante via l'hôte
+    for (let tries = 0; tries < 4 && !vis(host, '#screen-play'); tries++) {
+      try { if (vis(host, '#screen-vote') || vis(guest, '#screen-vote')) { click(host, '#btn-submit-votes'); await sleep(30); click(guest, '#btn-submit-votes'); await sleep(50); } } catch (e) {}
+      try { if (vis(host, '#screen-scores')) { click(host, '#btn-next-round'); await sleep(50); } } catch (e) {}
+      try { if (vis(host, '#screen-final')) { click(host, '#btn-again'); await sleep(60); } } catch (e) {}
+    }
+    check('manche en cours pour le test tardif', vis(host, '#screen-play') && vis(guest, '#screen-play'));
+    // guest remplit mais NE SOUMET PAS
+    qa(guest, '#answers-form input').forEach((inp, i) => { inp.value = ['Aigle', 'Allemagne', 'Avion'][i]; inp.dispatchEvent(new guest.Event('input', { bubbles: true })); });
+    // hôte stoppe avant
+    click(host, '#btn-stop-round');
+    await sleep(150);
+    check('reveal reçu par le guest (vote)', vis(guest, '#screen-vote'));
+    const rows = qa(guest, '#vote-list > .card').length;
+    check('réponses tardives auto du guest intégrées (rows=' + rows + ')', rows >= 3);
+    check('mots du guest dans le vote', /Aigle|Allemagne|Avion/i.test(q(guest, '#vote-list').textContent));
+    check('mêmes entrées côté hôte', qa(host, '#vote-list > .card').length === rows && rows >= 3);
+  }
+
+  // 7. lettres jamais répétées
   // (vérifié indirectement : usedLetters côté hôte) — on vérifie juste que 3 manches ont eu des lettres valides
   check('partie terminée sans erreur', true);
 
