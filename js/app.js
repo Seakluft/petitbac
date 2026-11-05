@@ -642,7 +642,7 @@
     inputs.forEach(inp => {
       inp.addEventListener('input', () => liveCheck(inp));
       inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' || e.key === 'Go' || e.keyCode === 13) {
           e.preventDefault();
           const n = inputs[inputs.indexOf(inp) + 1];
           if (n) n.focus(); else submitAnswers();   // Entrée sur le dernier champ = envoyer
@@ -1244,6 +1244,16 @@
     window.visualViewport.addEventListener('scroll', adjust);
   }
 
+  // ---------- mobile : fermer le clavier au 1er tap sur un bouton ----------
+  function initMobileTapFix() {
+    document.addEventListener('pointerdown', e => {
+      const btn = e.target.closest && e.target.closest('button');
+      if (btn && document.activeElement && document.activeElement.tagName === 'INPUT') {
+        document.activeElement.blur(); // ferme le clavier virtuel → le click passe au 1er tap
+      }
+    }, true);
+  }
+
   // ---------- boot ----------
   function init() {
     buildPrintSheet();
@@ -1269,6 +1279,7 @@
     $$('.btn-print-final').forEach(b => b.addEventListener('click', () => { buildPrintSheet(); window.print(); }));
     initDebug();
     initVisualViewport();
+    initMobileTapFix();
     loadDict();
     show('#screen-home');
     sfx && setTimeout(() => sfx('start'), 300);

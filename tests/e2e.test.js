@@ -123,6 +123,22 @@ function check(name, cond) {
     // (on vérifie juste que la soumission a eu lieu)
   }
 
+  // 2a2. MOBILE : tap sur le bouton avec clavier ouvert (input focusé) → blur + click transmis
+  {
+    // on remet l'hôte en manche : il a soumis via Entrée au 2a, on fait un stop pour revenir en play propre
+    // plus simple : nouveau test direct - focus un input, pointerdown sur le bouton submit, puis click
+    const inp = qa(host, '#answers-form input')[0];
+    inp.focus();
+    check('input focusé avant tap mobile', host.document.activeElement === inp);
+    // simule le 1er tap : pointerdown sur le bouton → blur() → le click passe
+    const btn = q(host, '#btn-submit-answers');
+    btn.dispatchEvent(new host.MouseEvent('pointerdown', { bubbles: true }));
+    check('clavier fermé au pointerdown (activeElement plus input)', host.document.activeElement !== inp);
+    btn.dispatchEvent(new host.Event('click', { bubbles: true }));
+    await sleep(30);
+    check('tap mobile sur ✅ → réponses soumises', vis(host, '#screen-vote') || vis(host, '#screen-play'));
+  }
+
   // 2b.BUGFIX(18:35) : l'hôte qui STOPpe avec SES réponses remplies doit produire des entrées non vides
   {
     qa(host, '#answers-form input').forEach((inp, i) => { inp.value = ['Abeille', 'Angleterre', 'Avion'][i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
