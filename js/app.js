@@ -79,7 +79,7 @@
   const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt', geographie: 'assets/geographie.txt', patronyme: 'assets/patronymes.txt' };
   function flattenKeys(k) { return Array.isArray(k) ? k : (k ? [k] : []); }
   function loadCatSets(categories) {
-    const keys = state.catKeys && state.catKeys.length === categories.length
+    const keys = state.catKeys && state.catKeys.length === categories.length && state.catKeys.every(k => k)
       ? state.catKeys
       : categories.map(c => window.PB_CATS.catKey(c));
     state.catKeys = keys;
@@ -227,6 +227,7 @@
   function currentSettings() {
     return {
       categories: state.categories,
+      catKeys: state.catKeys || state.categories.map(c => window.PB_CATS.catKey(c)),
       timer: state.timer,
       withTimer: state.withTimer,
       hardLetters: state.hardLetters,
@@ -350,6 +351,7 @@
   function applySettings(s) {
     if (!s) return;
     state.categories = s.categories;
+    if (s.catKeys) state.catKeys = s.catKeys;
     state.timer = s.timer;
     state.withTimer = s.withTimer;
     state.hardLetters = s.hardLetters;
@@ -727,7 +729,16 @@
 
   function stopRound() {
     if (state.phase !== 'playing') return;
-    if (state.role === 'host') { bcast({ type: 'stopping', by: myId() }); endRoundByHost(); }
+    if (state.role === 'host') {
+      // l'hôte soumet d'abord SES propres réponses courantes avant de reveal
+      if (!state.finishedFlags[myId()]) {
+        state.answers[myId()] = collectMyAnswers();
+        state.finishedFlags[myId()] = true;
+        bcast({ type: 'finished', id: myId(), players: state.players });
+      }
+      bcast({ type: 'stopping', by: myId() });
+      endRoundByHost();
+    }
     else { send({ type: 'stop' }); }
     buzz(80);
     toast('🛑 Stop ! La manche s\'arrête — dernières réponses !');

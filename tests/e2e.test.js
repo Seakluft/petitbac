@@ -109,8 +109,27 @@ function check(name, cond) {
   check('manche 1 lancée (play visible ×2)', vis(host, '#screen-play') && vis(guest, '#screen-play'));
   check('en-tête manche 1', q(host, '#play-round').textContent.includes('Manche 1 / 3'));
 
+  // 2b.BUGFIX(18:35) : l'hôte qui STOPpe avec SES réponses remplies doit produire des entrées non vides
+  {
+    qa(host, '#answers-form input').forEach((inp, i) => { inp.value = ['Abeille', 'Angleterre', 'Avion'][i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
+    click(host, '#btn-stop-round');
+    await sleep(120);
+    check('host stop avec réponses → vote non vide côté host', qa(host, '#vote-list > .card').length >= 3);
+    check('host stop avec réponses → vote non vide côté guest', qa(guest, '#vote-list > .card').length >= 3);
+    // on vote et on passe à la manche suivante pour la suite du test
+    qa(host, '#vote-list .vote-btns .up').forEach(b => b.dispatchEvent(new host.Event('click', { bubbles: true })));
+    click(host, '#btn-submit-votes');
+    await sleep(10);
+    qa(guest, '#vote-list .vote-btns .up').forEach(b => b.dispatchEvent(new guest.Event('click', { bubbles: true })));
+    click(guest, '#btn-submit-votes');
+    await sleep(50);
+    check('scores après stop host', vis(host, '#screen-scores'));
+    click(host, '#btn-next-round');
+    await sleep(50);
+  }
+
   // 3. jouer 3 manches jusqu'au final
-  for (let round = 1; round <= 3; round++) {
+  for (let round = 2; round <= 3; round++) {
     const letter = q(host, '#play-letter').textContent.toLowerCase();
     const words = { host: ['Pomme', 'Paris', 'Lion'], guest: ['Pomme', 'Lyon', 'Loup'] };
     qa(host, '#answers-form input').forEach((inp, i) => { inp.value = words.host[i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
