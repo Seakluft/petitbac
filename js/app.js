@@ -641,11 +641,18 @@
     const inputs = $$('#answers-form input');
     inputs.forEach(inp => {
       inp.addEventListener('input', () => liveCheck(inp));
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const n = inputs[inputs.indexOf(inp) + 1]; if (n) n.focus(); } });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const n = inputs[inputs.indexOf(inp) + 1];
+          if (n) n.focus(); else submitAnswers();   // Entrée sur le dernier champ = envoyer
+        }
+      });
     });
   }
 
   function liveCheck(inp) {
+    if (state.phase === 'playing') updatePlayStatus();
     const i = parseInt(inp.dataset.i, 10);
     const chk = document.querySelector('.chk[data-i="' + i + '"]');
     const v = inp.value.trim();
@@ -685,6 +692,14 @@
   function updatePlayStatus() {
     const el = $('#play-status');
     if (!el) return;
+    const inputs = $$('#answers-form input');
+    const filled = inputs.filter(i => i.value.trim()).length;
+    if (inputs.length) {
+      el.textContent = '✏️ ' + filled + '/' + inputs.length + ' remplies' + (filled === inputs.length ? ' — Entrée ou ✅ pour envoyer !' : '');
+      const btn = $('#btn-submit-answers');
+      if (btn) btn.classList.toggle('pulse', filled === inputs.length && filled > 0);
+      return;
+    }
     const done = state.players.filter(p => state.finishedFlags[p.id]);
     const n = done.length;
     const names = done.map(p => p.avatar + ' ' + p.name).join(' ');
@@ -1216,6 +1231,19 @@
     setInterval(renderDebug, 500);
   }
 
+  // ---------- clavier virtuel : la barre d'actions remonte au-dessus ----------
+  function initVisualViewport() {
+    if (!window.visualViewport) return;
+    const adjust = () => {
+      const kb = window.innerHeight - window.visualViewport.height; // hauteur du clavier
+      document.querySelectorAll('.sticky-bar').forEach(bar => {
+        bar.style.bottom = kb > 80 ? (kb + 10 + (parseFloat(getComputedStyle(document.body).getPropertyValue('--safe-b')) || 0)) + 'px' : '';
+      });
+    };
+    window.visualViewport.addEventListener('resize', adjust);
+    window.visualViewport.addEventListener('scroll', adjust);
+  }
+
   // ---------- boot ----------
   function init() {
     buildPrintSheet();
@@ -1240,6 +1268,7 @@
     $$('.btn-share').forEach(b => b.addEventListener('click', shareInvite));
     $$('.btn-print-final').forEach(b => b.addEventListener('click', () => { buildPrintSheet(); window.print(); }));
     initDebug();
+    initVisualViewport();
     loadDict();
     show('#screen-home');
     sfx && setTimeout(() => sfx('start'), 300);

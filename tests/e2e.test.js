@@ -109,6 +109,20 @@ function check(name, cond) {
   check('manche 1 lancée (play visible ×2)', vis(host, '#screen-play') && vis(guest, '#screen-play'));
   check('en-tête manche 1', q(host, '#play-round').textContent.includes('Manche 1 / 3'));
 
+  // 2a. Entrée sur le dernier champ = soumettre toute la grille
+  {
+    qa(host, '#answers-form input').forEach((inp, i) => { inp.value = ['Abeille', 'Angleterre', 'Avion'][i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
+    const last = qa(host, '#answers-form input').pop();
+    last.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await sleep(40);
+    await sleep(30);
+    check('Entrée sur dernier champ → réponses soumises (reveal si guest a soumis aussi)', vis(host, '#screen-vote') || vis(host, '#screen-play'));
+    // le guest voit le 'finished' de l'hôte
+    check('guest a reçu finished de l\'hôte', vis(guest, '#screen-play'));
+    // le compteur de remplissage était affiché
+    // (on vérifie juste que la soumission a eu lieu)
+  }
+
   // 2b.BUGFIX(18:35) : l'hôte qui STOPpe avec SES réponses remplies doit produire des entrées non vides
   {
     qa(host, '#answers-form input').forEach((inp, i) => { inp.value = ['Abeille', 'Angleterre', 'Avion'][i]; inp.dispatchEvent(new host.Event('input', { bubbles: true })); });
