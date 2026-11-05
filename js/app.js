@@ -270,7 +270,8 @@
         break;
       }
       case 'reveal': {
-        state.entries = msg.entries;
+        stopTimer();
+        state.entries = msg.entries || [];
         state.round = msg.round - 1;
         state.myVotes = state.myVotes || {};
         state.phase = 'vote';
@@ -722,7 +723,20 @@
     state.myVotes = state.myVotes || {};
     const box = $('#vote-list');
     box.innerHTML = '';
-    if (!entries.length) { box.innerHTML = '<p>Aucune réponse 😅</p>'; }
+    if (!entries.length) {
+      box.innerHTML = '<div class="card" style="text-align:center"><p style="font-size:1.1rem;font-weight:800">😴 Personne n\'a répondu à cette manche…</p>' +
+        (state.role === 'host' ? '<button id="btn-skip-empty" class="btn">⏭ Manche suivante</button>' : '<p class="hint">En attente de l\'hôte…</p>') + '</div>';
+      const skip = document.getElementById('btn-skip-empty');
+      if (skip) skip.addEventListener('click', () => {
+        const last = state.round + 1 >= state.numRounds;
+        if (last) { bcast({ type: 'final', totals: state.totals }); showFinal(state.totals); }
+        else {
+          const letter = R.pickLetter(Math.random, state.hardLetters, state.usedLetters);
+          bcast({ type: 'start', letter, round: state.round + 2, settings: currentSettings() });
+          startRound(letter, state.round + 2);
+        }
+      });
+    }
     entries.forEach(e => {
       const row = document.createElement('div');
       row.className = 'card';
@@ -1113,6 +1127,7 @@
       'réponses: ' + (answersInfo || '-'),
       'entrées manche: ' + (entriesInfo || '-'),
       'totaux: ' + JSON.stringify(state.totals || {}),
+      'écran visible: ' + (([...document.querySelectorAll('.screen')].find(e => !e.classList.contains('hidden')) || {}).id || '-') + '  voteList=' + document.querySelectorAll('#vote-list > *').length + ' rows  playForm=' + document.querySelectorAll('#answers-form input').length + ' champs',
       'erreurs JS: ' + (JSERRS.join(' ;; ') || 'aucune'),
       '--- réseau (30 derniers) ---',
       NETLOG.slice(-30).map(l => new Date(l.t).toLocaleTimeString() + '.' + String(l.t % 1000).padStart(3, '0') + ' ' + l.dir + ' ' + l.type + (l.from ? ' de ' + l.from : '')).join('\n'),

@@ -144,7 +144,23 @@ function check(name, cond) {
     }
   }
 
-  // 4. lettres jamais répétées
+  // 4. cas « reveal vide » (personne n'a répondu, STOP précoce) : message clair + pas de blocage
+  {
+    // on rejoue une manche 1 bis en forçant un stop immédiat côté hôte sans réponses
+    click(host, '#btn-again');
+    await sleep(40);
+    check('rejouer relance une manche', vis(host, '#screen-play'));
+    click(host, '#btn-stop-round'); // stop immédiat, 0 réponse
+    await sleep(40);
+    check('reveal vide : écran vote visible ×2', vis(host, '#screen-vote') && vis(guest, '#screen-vote'));
+    check('reveal vide : message affiché', /Personne n/.test(q(host, '#vote-list').textContent));
+    check('reveal vide : bouton passer hôte présent', !!q(host, '#btn-skip-empty'));
+    click(host, '#btn-skip-empty'); // passe à la manche suivante sans votes
+    await sleep(40);
+    check('manche suivante lancée après reveal vide', vis(host, '#screen-play') && vis(guest, '#screen-play'));
+  }
+
+  // 5. lettres jamais répétées
   // (vérifié indirectement : usedLetters côté hôte) — on vérifie juste que 3 manches ont eu des lettres valides
   check('partie terminée sans erreur', true);
 
