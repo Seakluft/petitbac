@@ -40,7 +40,7 @@
     $$('.screen').forEach(el => el.classList.add('hidden'));
     const el = $(id);
     if (el) el.classList.remove('hidden');
-    window.scrollTo({ top: 0 });
+    try { window.scrollTo({ top: 0 }); } catch (e) {}
   }
 
   function toast(msg, ms) {
@@ -144,6 +144,11 @@
         maybeEndRound();
         break;
       }
+      case 'vote-sent': {
+        state.finishedFlags['vote:' + from] = true;
+        maybeFinishVotes();
+        break;
+      }
       case 'stop': {
         if (state.stopMode) endRoundByHost();
         break;
@@ -160,6 +165,13 @@
       case 'vote': {
         state.myVotesHost = state.myVotesHost || {};
         state.myVotesHost[from] = msg.votes;
+        bcast({ type: 'vote-progress', id: from });
+        break;
+      }
+      case 'votes-done': {
+        state.myVotesHost = state.myVotesHost || {};
+        state.myVotesHost[from] = msg.votes;
+        state.finishedFlags['vote:' + from] = true;
         bcast({ type: 'vote-progress', id: from });
         maybeFinishVotes();
         break;
@@ -242,7 +254,13 @@
       case 'reveal': {
         state.entries = msg.entries;
         state.round = msg.round - 1;
+        state.myVotes = state.myVotes || {};
+        state.phase = 'vote';
         showReveal(msg.entries);
+        break;
+      }
+      case 'rejoin-play': {
+        // l'hôte prévient qu'une manche est en cours : on reste sur l'écran de jeu
         break;
       }
       case 'vote-result': {
@@ -256,11 +274,13 @@
       }
       case 'finished': {
         state.finishedFlags[msg.id] = true;
-        updatePlayStatus();
-        const ws = $('#waiting-status');
-        if (ws && state.phase === 'playing') {
-          const n = state.players.filter(p => state.finishedFlags[p.id]).length;
-          ws.textContent = '🚀 ' + n + ' / ' + state.players.length + ' ont terminé';
+        if (state.phase === 'playing') {
+          updatePlayStatus();
+          const ws = $('#waiting-status');
+          if (ws) {
+            const n = state.players.filter(p => state.finishedFlags[p.id]).length;
+            ws.textContent = '🚀 ' + n + ' / ' + state.players.length + ' ont terminé';
+          }
         }
         break;
       }
@@ -319,7 +339,6 @@
         show('#screen-setup');
         renderCategoryPicker();
         $('#setup-code').textContent = state.code;
-        $('#setup-link').textContent = shareUrl();
       },
       onGuestJoined: (id, conn) => { conn.send({ type: 'ping' }); },
       onData: (from, msg) => { if (msg.type !== 'ping') hostData(from, msg); },
@@ -615,9 +634,12 @@
       maybeEndRound();
     } else {
       send({ type: 'answers', answers });
-      show('#screen-waiting');
-      $('#waiting-text').textContent = '✨ Tes réponses sont envoyées !';
-      $('#waiting-status').textContent = '';
+      state.finishedFlags[myId()] = true;
+      if (state.phase === 'playing') {
+        show('#screen-waiting');
+        $('#waiting-text').textContent = '✨ Tes réponses sont envoyées !';
+        $('#waiting-status').textContent = '🚀 1 / ' + state.players.length + ' ont terminé';
+      }
     }
     updatePlayStatus();
   }
@@ -654,6 +676,7 @@
   // ---------- révélation + vote ----------
   function showReveal(entries) {
     state.phase = 'vote';
+    state.myVotes = state.myVotes || {};
     const box = $('#vote-list');
     box.innerHTML = '';
     if (!entries.length) { box.innerHTML = '<p>Aucune réponse 😅</p>'; }
@@ -688,17 +711,18 @@
         if (state.role === 'host') {
           state.myVotesHost[myId()] = state.myVotes;
           bcast({ type: 'vote-progress', id: myId() });
-          maybeFinishVotes();
         } else {
           send({ type: 'vote', votes: state.myVotes });
         }
       });
     });
     const submit = $('#btn-submit-votes');
-    submit.classList.remove('hidden');
+    if (submit) submit.classList.remove('hidden');
+    refreshVoteButtons();
     updateVoteProgress();
     show('#screen-vote');
-    $('#vote-round').textContent = 'Manche ' + (state.round + 1) + ' — lettre « ' + state.letter.toUpperCase() + ' »';
+    const vr = $('#vote-round');
+    if (vr) vr.textContent = 'Manche ' + (state.round + 1) + ' — lettre « ' + state.letter.toUpperCase() + ' »';
   }
 
   function refreshVoteButtons() {
@@ -713,10 +737,11 @@
     $('#btn-submit-votes').addEventListener('click', () => {
       if (state.role === 'host') {
         state.myVotesHost[myId()] = state.myVotes;
+        state.finishedFlags['vote:' + myId()] = true;
         bcast({ type: 'vote-progress', id: myId() });
         maybeFinishVotes();
       } else {
-        send({ type: 'vote', votes: state.myVotes });
+        send({ type: 'votes-done', votes: state.myVotes });
         $('#btn-submit-votes').classList.add('hidden');
         toast('🗳️ Votes envoyés !');
       }
@@ -724,13 +749,11 @@
   }
 
   function allVotesCollected() {
-    const votes = state.myVotesHost || {};
-    return state.players.every(p => votes[p.id]);
+    return state.players.every(p => state.finishedFlags['vote:' + p.id]);
   }
 
   function updateVoteProgress() {
-    const votes = state.myVotesHost || {};
-    const done = state.players.filter(p => votes[p.id]).length;
+    const done = state.players.filter(p => state.finishedFlags['vote:' + p.id]).length;
     const el = $('#vote-progress');
     if (el) el.textContent = '🗳️ ' + done + ' / ' + state.players.length + ' joueurs ont voté — on attend tout le monde…';
   }
@@ -758,6 +781,16 @@
   function showScores(entries, roundScore, totals, isHostView) {
     state.phase = 'scores';
     $('#scores-round').textContent = 'Résultats — manche ' + (state.round + 1) + ' (lettre « ' + state.letter.toUpperCase() + ' »)';
+    const myPts = (roundScore && myId() && roundScore[myId()]) || 0;
+    let myLine = document.getElementById('my-round-points');
+    if (!myLine) {
+      myLine = document.createElement('p');
+      myLine.id = 'my-round-points';
+      myLine.style.cssText = 'text-align:center;font-size:1.3rem;font-weight:900;margin:4px 0 10px';
+      const h = document.querySelector('#scores-round');
+      h.parentElement.insertBefore(myLine, h.nextSibling);
+    }
+    myLine.textContent = myPts > 0 ? '⭐ Tu marques +' + myPts + ' pts cette manche !' : '😅 0 pt cette manche…';
     const det = $('#score-detail');
     det.innerHTML = '';
     const byCat = {};
