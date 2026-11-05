@@ -73,3 +73,12 @@ python3 -m http.server 8000
 
 Tests : `node tests/rules.test.js`
 docs: livraison directe sur main
+
+## Tests
+
+- `npm test` — tests unitaires des règles (`tests/rules.test.js`)
+- `npm install && npm run test:e2e` — **test de bout en bout** (`tests/e2e.test.js`) : simule une partie complète hôte + invité (création → salon → 3 manches → votes → scores → classement final) avec un mock PeerJS in-memory, et vérifie le compteur de manches, l'affichage des points et l'atteinte de l'écran final.
+
+## Debug
+
+Ajouter `?debug=1` à l'URL (ex. `https://seakluft.github.io/petitbac/?debug=1`) affiche un overlay permanent : phase, manche, lettre, timer, rôle, état PeerJS, joueurs offline, `finishedFlags`, votes reçus, et journal des 30 derniers messages réseau ↗/↙.

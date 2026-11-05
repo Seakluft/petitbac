@@ -27,7 +27,7 @@ window.PB_CATS = (function () {
   // alias de noms de catégories -> clé interne OU tableau de clés (groupe de listes)
   const ALIAS = {
     'prénom': 'prenom', 'prenom': 'prenom', 'prénoms': 'prenom', 'prenoms': 'prenom',
-    'nom de famille': 'prenom', 'nom': 'prenom',
+    'nom de famille': 'patronyme', 'nom de famille / patronyme': 'patronyme', 'patronyme': 'patronyme', 'patronymes': 'patronyme', 'nom': 'patronyme',
     'animal': 'animal', 'animaux': 'animal',
     'fruit': 'fruit', 'fruits': 'fruit',
     'légume': 'legume', 'legume': 'legume', 'légumes': 'legume', 'legumes': 'legume',
@@ -73,7 +73,7 @@ window.PB_CATS = (function () {
   // clés de listes connues, proposées pour les catégories personnalisées
   const KNOWN_LISTS = [
     ['ville', 'Ville'], ['pays', 'Pays'], ['geographie', 'Géographie (montagnes, fleuves, mers…)'],
-    ['animal', 'Animal'], ['prenom', 'Prénom / nom'], ['fruit', 'Fruit'], ['legume', 'Légume'],
+    ['animal', 'Animal'], ['prenom', 'Prénom'], ['patronyme', 'Nom de famille'], ['fruit', 'Fruit'], ['legume', 'Légume'],
     ['metier', 'Métier'], ['couleur', 'Couleur'], ['objet', 'Objet'], ['aliment', 'Aliment / boisson'],
     ['celebre', 'Célébrité / personnage'], ['film', 'Film / série / livre / jeu']
   ];

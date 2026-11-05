@@ -1,0 +1,13 @@
+{
+  "name": "petitbac",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Petit Bac multijoueur en ligne (GitHub Pages), zéro serveur, WebRTC via PeerJS cloud gratuit.",
+  "scripts": {
+    "test": "node tests/rules.test.js",
+    "test:e2e": "node tests/e2e.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

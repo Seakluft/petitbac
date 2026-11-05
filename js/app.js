@@ -76,7 +76,7 @@
 
   // listes par catégorie chargées à la demande (une seule fois)
   state.catSets = state.catSets || {};
-  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt', geographie: 'assets/geographie.txt' };
+  const CAT_FILES = { ville: 'assets/villes.txt', pays: 'assets/pays.txt', animal: 'assets/animaux.txt', prenom: 'assets/prenoms.txt', celebre: 'assets/celebrites.txt', film: 'assets/films.txt', geographie: 'assets/geographie.txt', patronyme: 'assets/patronymes.txt' };
   function flattenKeys(k) { return Array.isArray(k) ? k : (k ? [k] : []); }
   function loadCatSets(categories) {
     const keys = state.catKeys && state.catKeys.length === categories.length
@@ -87,17 +87,18 @@
     keys.forEach(k => {
       flattenKeys(k).forEach(single => {
         if (!single) return;
-        if (state.catSets[single]) return;
+        // inline d'abord (synchrone), puis le gros fichier .txt vient EN PLUS (union)
+        if (!state.catSets[single]) state.catSets[single] = new Set();
         if (window.PB_CATS.CATS[single] && window.PB_CATS.CATS[single].length) {
-          state.catSets[single] = new Set(window.PB_CATS.CATS[single]);
-          return;
+          window.PB_CATS.CATS[single].forEach(w => state.catSets[single].add(w));
         }
         const f = CAT_FILES[single];
         if (!f) return;
+        if (state.catSets[single].fromFile) return; // déjà chargé
         jobs.push(fetch(f).then(r => r.text()).then(txt => {
-          const s = new Set();
+          const s = state.catSets[single];
           txt.split('\n').forEach(w => { if (w) s.add(w); });
-          state.catSets[single] = s;
+          s.fromFile = true;
         }).catch(() => {}));
       });
     });
@@ -105,11 +106,20 @@
   }
 
   // ---------- réseau ----------
-  function send(msg) { if (state.net && !state.net.isHost) state.net.send(msg); }
-  function bcast(msg) { if (state.net && state.net.isHost) state.net.broadcast(msg); }
-  function sendOrBcast(msg) { if (state.net && state.net.isHost) state.net.broadcast(msg); else if (state.net) state.net.send(msg); }
+  const NETLOG = [];
+  function netlog(dir, msg) {
+    try {
+      NETLOG.push({ t: Date.now(), dir, type: msg.type, from: (msg.from || '').slice(-10) });
+      if (NETLOG.length > 30) NETLOG.shift();
+      if (window.__debugOn) renderDebug();
+    } catch (e) {}
+  }
+  function send(msg) { netlog('↗', msg); if (state.net && !state.net.isHost) state.net.send(msg); }
+  function bcast(msg) { netlog('↗', msg); if (state.net && state.net.isHost) state.net.broadcast(msg); }
+  function sendOrBcast(msg) { netlog('↗', msg); if (state.net && state.net.isHost) state.net.broadcast(msg); else if (state.net) state.net.send(msg); }
 
   function hostData(from, msg) {
+    netlog('↙', msg);
     switch (msg.type) {
       case 'hello': {
         const name = String(msg.name || 'Joueur').slice(0, 16);
@@ -172,6 +182,7 @@
         state.myVotesHost = state.myVotesHost || {};
         state.myVotesHost[from] = msg.votes;
         state.finishedFlags['vote:' + from] = true;
+        state.net.sendTo(from, { type: 'vote-ack' });
         bcast({ type: 'vote-progress', id: from });
         maybeFinishVotes();
         break;
@@ -184,6 +195,12 @@
   }
 
   function removePlayer(id) {
+    // en pleine partie on garde le joueur (reconnexion possible), on le marque juste offline
+    if (state.phase === 'playing' || state.phase === 'vote' || state.phase === 'scores' || state.phase === 'reveal' || state.phase === 'final') {
+      const p = state.players.find(x => x.id === id);
+      if (p) { p.offline = true; bcast({ type: 'players', players: state.players }); renderLobby(); }
+      return;
+    }
     state.players = state.players.filter(p => p.id !== id);
     delete state.answers[id];
     bcast({ type: 'players', players: state.players });
@@ -202,6 +219,7 @@
   }
 
   function guestData(from, msg) {
+    netlog('↙', msg);
     switch (msg.type) {
       case 'welcome': {
         state.players = msg.players;
@@ -289,6 +307,7 @@
         break;
       }
       case 'vote-progress': updateVoteProgress(); break;
+      case 'vote-ack': toast('🗳️ L\'hôte a bien reçu tes votes'); break;
       case 'kicked': toast('👋 L\'hôte a fermé la partie'); location.hash = ''; location.reload(); break;
     }
   }
@@ -307,6 +326,7 @@
   function initHome() {
     $('#btn-create').addEventListener('click', () => {
       const name = $('#home-name').value.trim() || 'Hôte';
+      try { localStorage.setItem('pb-name', name); } catch (e) {}
       state.name = name.slice(0, 16);
       state.code = R.genRoomCode();
       state.role = 'host';
@@ -314,6 +334,7 @@
     });
     $('#btn-join').addEventListener('click', () => {
       const name = $('#home-name').value.trim() || 'Joueur';
+      try { localStorage.setItem('pb-name', name); } catch (e) {}
       const code = $('#room-code').value.trim().toUpperCase();
       if (!/^[A-Z2-9]{5}$/.test(code)) { toast('⚠️ Code à 5 caractères (ex: K7XQM)'); return; }
       state.name = name.slice(0, 16);
@@ -322,7 +343,16 @@
       openGuest();
     });
     const m = location.hash.match(/room=([A-Z2-9]{5})/i);
-    if (m) { $('#room-code').value = m[1].toUpperCase(); toast('🔗 Code de partie détecté : ' + m[1].toUpperCase()); }
+    if (m) {
+      $('#room-code').value = m[1].toUpperCase();
+      toast('🔗 Code de partie détecté : ' + m[1].toUpperCase());
+      const lastName = (() => { try { return localStorage.getItem('pb-name') || ''; } catch (e) { return ''; } })();
+      if (lastName) {
+        $('#home-name').value = lastName;
+        setTimeout(() => { try { $('#btn-join').click(); } catch (e) {} }, 600);
+        toast('🔁 Reconnexion à la partie ' + m[1].toUpperCase() + '…');
+      }
+    }
     $('#btn-howto').addEventListener('click', () => $('#modal-howto').classList.remove('hidden'));
     $('#btn-close-howto').addEventListener('click', () => $('#modal-howto').classList.add('hidden'));
     $('#modal-howto').addEventListener('click', e => { if (e.target.id === 'modal-howto') e.target.classList.add('hidden'); });
@@ -521,6 +551,7 @@
   // ---------- manche ----------
   function startRound(letter, roundNo) {
     state.phase = 'playing';
+    state.round = roundNo - 1;   // compteur de manche tenu ici (hôte ET invités)
     state.letter = letter;
     state.usedLetters.add(letter);
     state.entries = [];
@@ -554,6 +585,9 @@
     }
     renderAnswerForm();
     show('#screen-play');
+    const forceBtn = $('#btn-force-end');
+    if (forceBtn) forceBtn.classList.toggle('hidden', state.role !== 'host');
+    updateConnBadge();
     updatePlayStatus();
   }
 
@@ -600,6 +634,15 @@
       chk.className = 'chk status-ko';
       inp.classList.add('warn');
     }
+  }
+
+  function updateConnBadge() {
+    const b = $('#conn-badge');
+    if (!b || !state.net || !state.net.peer) return;
+    const ok = state.net.peer.open !== false && !!state.net.peer.id;
+    b.textContent = ok ? '🟢' : '🔴';
+    b.className = 'conn-badge ' + (ok ? 'ok' : 'bad');
+    b.title = ok ? 'Connecté (' + state.net.peer.id.slice(-12) + ')' : 'Déconnecté — reconnexion…';
   }
 
   function updatePlayStatus() {
@@ -1038,6 +1081,38 @@
     } else toast(text);
   }
 
+  // ---------- overlay debug (?debug=1) ----------
+  function renderDebug() {
+    let el = document.getElementById('debug-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'debug-overlay';
+      el.style.cssText = 'position:fixed;top:0;right:0;z-index:999;background:rgba(0,0,0,.85);color:#7fff7f;font:11px monospace;padding:6px 8px;max-width:46vw;max-height:60vh;overflow:auto;border-radius:0 0 0 8px;white-space:pre-wrap;pointer-events:none';
+      document.body.appendChild(el);
+    }
+    const net = state.net;
+    let connInfo = 'net: none';
+    if (net) {
+      const open = net.isHost ? [...net.conns.values()].filter(c => c.open).length : (net.peer && net.peer.connections ? Object.values(net.peer.connections).filter(c => c.length && c[0].open).length : '?');
+      connInfo = 'net: ' + (net.isHost ? 'HOST' : 'GUEST') + ' peer.open=' + (net.peer && net.peer.open) + ' conns=' + open;
+    }
+    const flags = Object.entries(state.finishedFlags || {}).map(([k, v]) => k.slice(-8) + '=' + v).join(' ');
+    const votes = Object.keys(state.myVotesHost || {}).length;
+    el.textContent =
+      'phase=' + state.phase + ' round=' + state.round + ' lettre=' + (state.letter || '-') +
+      ' timer=' + (state.timeLeft != null ? state.timeLeft : '-') + '\n' +
+      'role=' + state.role + ' code=' + (state.code || '-') + '\n' + connInfo + '\n' +
+      'players=' + state.players.map(p => p.name + (p.offline ? '💤' : '')).join(',') + '\n' +
+      'finished: ' + flags + '\nvotes reçus: ' + votes + '/' + state.players.length + '\n' +
+      NETLOG.slice(-10).map(l => new Date(l.t).toLocaleTimeString() + ' ' + l.dir + ' ' + l.type + (l.from ? ' ' + l.from : '')).join('\n');
+  }
+  function initDebug() {
+    if (!/[?&]debug=1/.test(location.search)) return;
+    window.__debugOn = true;
+    renderDebug();
+    setInterval(renderDebug, 500);
+  }
+
   // ---------- boot ----------
   function init() {
     buildPrintSheet();
@@ -1050,6 +1125,9 @@
     $('#btn-submit-answers').addEventListener('click', submitAnswers);
     const stopBtn = $('#btn-stop-round');
     if (stopBtn) stopBtn.addEventListener('click', stopRound);
+    const forceBtn = $('#btn-force-end');
+    if (forceBtn) forceBtn.addEventListener('click', () => { if (state.role === 'host' && state.phase === 'playing') { endRoundByHost(); toast('⏭ Manche terminée de force par l\'hôte'); } });
+    setInterval(updateConnBadge, 2000);
     $('#btn-print-play').addEventListener('click', () => { buildPrintSheet(); window.print(); });
     $('#btn-quit').addEventListener('click', () => { if (confirm('Quitter la partie ?')) { location.hash = ''; location.reload(); } });
     $('#btn-mute').addEventListener('click', () => {
@@ -1058,6 +1136,7 @@
     });
     $$('.btn-share').forEach(b => b.addEventListener('click', shareInvite));
     $$('.btn-print-final').forEach(b => b.addEventListener('click', () => { buildPrintSheet(); window.print(); }));
+    initDebug();
     loadDict();
     show('#screen-home');
     sfx && setTimeout(() => sfx('start'), 300);

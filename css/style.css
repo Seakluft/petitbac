@@ -597,3 +597,7 @@ body[data-theme="carnet"] .score-line .pts { color: #33302a; }
 body[data-theme="carnet"] table.results th { color: #6b6353; }
 body[data-theme="carnet"] .toast { background: #33302a; border: 2px solid #fffdf5; box-shadow: 3px 4px 0 rgba(0,0,0,.3); }
 body[data-theme="carnet"] .spinner { animation: spin-bounce 1.1s ease-in-out infinite; }
+
+.conn-badge { font-size: .9rem; padding: 4px 7px; border-radius: 999px; background: rgba(255,255,255,.15); }
+.conn-badge.ok { background: #2f9e5f; }
+.conn-badge.bad { background: #e5484d; }
