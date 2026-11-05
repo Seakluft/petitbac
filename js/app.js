@@ -1081,33 +1081,67 @@
     } else toast(text);
   }
 
-  // ---------- overlay debug (?debug=1) ----------
+  // ---------- overlay debug (par défaut, ?debug=0 pour masquer) ----------
+  const JSERRS = [];
+  window.addEventListener('error', e => {
+    JSERRS.push(new Date().toLocaleTimeString() + ' ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+    if (JSERRS.length > 10) JSERRS.shift();
+    if (window.__debugOn) renderDebug();
+  });
+
+  function debugSnapshot() {
+    const net = state.net;
+    let connInfo = 'net: aucun';
+    if (net && net.peer) {
+      let conns = '?';
+      if (net.isHost) conns = [...net.conns.entries()].map(([id, c]) => id.slice(-8) + ':' + (c.open ? 'open' : 'closed')).join(' ') || 'aucune';
+      else conns = Object.entries(net.peer.connections || {}).map(([id, arr]) => id.slice(-8) + ':' + (arr[0] && arr[0].open ? 'open' : 'closed')).join(' ') || 'aucune';
+      connInfo = (net.isHost ? 'HOST' : 'GUEST') + ' peerId=' + String(net.peer.id).slice(-14) + ' open=' + net.peer.open + ' conns=[' + conns + ']';
+    }
+    const catInfo = Object.entries(state.catSets || {}).map(([k, v]) => k + ':' + (v.size || 0)).join(' ');
+    const entriesInfo = (state.entries || []).map(e => e.word + (e.auto ? '✓' : (e.catCheck === false ? '✗cat' : '?'))).join(' | ');
+    const answersInfo = Object.entries(state.answers || {}).map(([id, a]) => id.slice(-6) + '=' + JSON.stringify(a)).join(' ');
+    return [
+      '=== PETIT BAC DEBUG ' + new Date().toLocaleTimeString() + ' ===',
+      'phase=' + state.phase + '  manche=' + (state.round + 1) + '/' + state.numRounds + '  lettre=' + (state.letter || '-') + '  timer=' + (state.timeLeft != null ? state.timeLeft + 's' : 'off'),
+      'role=' + (state.role || '-') + '  code=' + (state.code || '-') + '  room=' + location.hash,
+      connInfo,
+      'joueurs: ' + state.players.map(p => p.name + (p.isHost ? '★' : '') + (p.offline ? '💤' : '')).join(', '),
+      'catSets: ' + (catInfo || 'aucune') + '  dict=' + state.dict.size + ' entrées',
+      'finishedFlags: ' + JSON.stringify(state.finishedFlags),
+      'votesHost: ' + Object.keys(state.myVotesHost || {}).length + '/' + state.players.length + '  myVotes=' + JSON.stringify(state.myVotes || {}),
+      'réponses: ' + (answersInfo || '-'),
+      'entrées manche: ' + (entriesInfo || '-'),
+      'totaux: ' + JSON.stringify(state.totals || {}),
+      'erreurs JS: ' + (JSERRS.join(' ;; ') || 'aucune'),
+      '--- réseau (30 derniers) ---',
+      NETLOG.slice(-30).map(l => new Date(l.t).toLocaleTimeString() + '.' + String(l.t % 1000).padStart(3, '0') + ' ' + l.dir + ' ' + l.type + (l.from ? ' de ' + l.from : '')).join('\n'),
+      'UA: ' + navigator.userAgent
+    ].join('\n');
+  }
+
   function renderDebug() {
     let el = document.getElementById('debug-overlay');
     if (!el) {
       el = document.createElement('div');
       el.id = 'debug-overlay';
-      el.style.cssText = 'position:fixed;top:0;right:0;z-index:999;background:rgba(0,0,0,.85);color:#7fff7f;font:11px monospace;padding:6px 8px;max-width:46vw;max-height:60vh;overflow:auto;border-radius:0 0 0 8px;white-space:pre-wrap;pointer-events:none';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:rgba(10,10,10,.92);color:#8dff8d;font:10px/1.35 monospace;padding:5px 8px;max-height:38vh;overflow:auto;white-space:pre-wrap;pointer-events:none;border-bottom:2px solid #ff0';
       document.body.appendChild(el);
+      const btn = document.createElement('button');
+      btn.id = 'debug-copy';
+      btn.textContent = '📋 copier le rapport debug';
+      btn.style.cssText = 'position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));right:10px;z-index:2147483647;font:700 12px sans-serif;padding:8px 10px;border-radius:10px;border:2px solid #ff0;background:#111;color:#ff0;cursor:pointer';
+      btn.addEventListener('click', () => {
+        const txt = debugSnapshot();
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('📋 Rapport debug copié !'));
+        else toast('Copie impossible');
+      });
+      document.body.appendChild(btn);
     }
-    const net = state.net;
-    let connInfo = 'net: none';
-    if (net) {
-      const open = net.isHost ? [...net.conns.values()].filter(c => c.open).length : (net.peer && net.peer.connections ? Object.values(net.peer.connections).filter(c => c.length && c[0].open).length : '?');
-      connInfo = 'net: ' + (net.isHost ? 'HOST' : 'GUEST') + ' peer.open=' + (net.peer && net.peer.open) + ' conns=' + open;
-    }
-    const flags = Object.entries(state.finishedFlags || {}).map(([k, v]) => k.slice(-8) + '=' + v).join(' ');
-    const votes = Object.keys(state.myVotesHost || {}).length;
-    el.textContent =
-      'phase=' + state.phase + ' round=' + state.round + ' lettre=' + (state.letter || '-') +
-      ' timer=' + (state.timeLeft != null ? state.timeLeft : '-') + '\n' +
-      'role=' + state.role + ' code=' + (state.code || '-') + '\n' + connInfo + '\n' +
-      'players=' + state.players.map(p => p.name + (p.offline ? '💤' : '')).join(',') + '\n' +
-      'finished: ' + flags + '\nvotes reçus: ' + votes + '/' + state.players.length + '\n' +
-      NETLOG.slice(-10).map(l => new Date(l.t).toLocaleTimeString() + ' ' + l.dir + ' ' + l.type + (l.from ? ' ' + l.from : '')).join('\n');
+    el.textContent = debugSnapshot();
   }
   function initDebug() {
-    // debug par défaut (peut être désactivé avec ?debug=0)
+    // debug par défaut (désactivable avec ?debug=0)
     if (/[?&]debug=0/.test(location.search)) return;
     window.__debugOn = true;
     renderDebug();

@@ -79,6 +79,16 @@ docs: livraison directe sur main
 - `npm test` — tests unitaires des règles (`tests/rules.test.js`)
 - `npm install && npm run test:e2e` — **test de bout en bout** (`tests/e2e.test.js`) : simule une partie complète hôte + invité (création → salon → 3 manches → votes → scores → classement final) avec un mock PeerJS in-memory, et vérifie le compteur de manches, l'affichage des points et l'atteinte de l'écran final.
 
-## Debug
+## Debug (diagnostic par capture d'écran)
 
-L'overlay debug est **affiché par défaut** (désactivable avec `?debug=0`, ex. `https://seakluft.github.io/petitbac/?debug=0`) : phase, manche, lettre, timer, rôle, état PeerJS, joueurs offline, `finishedFlags`, votes reçus, et journal des 30 derniers messages réseau ↗/↙.
+L'overlay debug est **affiché par défaut en haut de l'écran** (désactivable avec `?debug=0`). Une capture d'écran montre directement :
+- phase courante, manche X/N, lettre, timer restant, rôle (hôte/invité), code de partie, `#room=`
+- état PeerJS : peerId, open/closed, **chaque connexion par joueur** (open/closed) → détecte une connexion P2P morte
+- joueurs (★ hôte, 💤 offline), tailles des listes chargées (`catSets: ville:85007 …`), taille du dictionnaire
+- `finishedFlags` par joueur, votes reçus X/N, tes votes en cours
+- réponses soumises par joueur, entrées de la manche (mot ✓auto / ✗cat / ?vote), totaux
+- **erreurs JS capturées** (message + fichier:ligne)
+- journal des 30 derniers messages réseau horodatés (↗ envoyé / ↙ reçu, type, expéditeur)
+- User-Agent
+
+Bouton **📋 copier le rapport debug** (en bas à droite) copie tout le texte dans le presse-papiers pour le partager.
