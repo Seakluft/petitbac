@@ -833,17 +833,24 @@
         if (state.myVotes[id] === v) delete state.myVotes[id];
         else state.myVotes[id] = v;
         refreshVoteButtons();
+        updateVoteCount(entries);
+        sfx('chat');
         if (state.role === 'host') {
           state.myVotesHost[myId()] = state.myVotes;
           bcast({ type: 'vote-progress', id: myId() });
         } else {
           send({ type: 'vote', votes: state.myVotes });
         }
+        // auto-envoi quand tous les mots ont un vote
+        if (entries.length && Object.keys(state.myVotes).length >= entries.length) {
+          submitVotes();
+        }
       });
     });
     const submit = $('#btn-submit-votes');
-    if (submit) submit.classList.remove('hidden');
+    if (submit) { submit.classList.remove('hidden'); submit.textContent = '📨 Envoyer mes votes'; }
     refreshVoteButtons();
+    updateVoteCount(entries);
     updateVoteProgress();
     show('#screen-vote');
     const vr = $('#vote-round');
@@ -858,19 +865,30 @@
     });
   }
 
+  function updateVoteCount(entries) {
+    const el = $('#vote-count');
+    if (!el) return;
+    const n = Object.keys(state.myVotes || {}).length;
+    el.textContent = '🗳️ ' + n + ' / ' + entries.length + ' mots votés';
+  }
+
+  function submitVotes() {
+    if (state.phase !== 'vote') return;
+    if (state.role === 'host') {
+      state.myVotesHost[myId()] = state.myVotes;
+      state.finishedFlags['vote:' + myId()] = true;
+      bcast({ type: 'vote-progress', id: myId() });
+      maybeFinishVotes();
+    } else {
+      send({ type: 'votes-done', votes: state.myVotes });
+      const btn = $('#btn-submit-votes');
+      if (btn) { btn.classList.add('hidden'); btn.textContent = '📨 Votes envoyés !'; }
+      toast('🗳️ Votes envoyés !');
+    }
+  }
+
   function initVote() {
-    $('#btn-submit-votes').addEventListener('click', () => {
-      if (state.role === 'host') {
-        state.myVotesHost[myId()] = state.myVotes;
-        state.finishedFlags['vote:' + myId()] = true;
-        bcast({ type: 'vote-progress', id: myId() });
-        maybeFinishVotes();
-      } else {
-        send({ type: 'votes-done', votes: state.myVotes });
-        $('#btn-submit-votes').classList.add('hidden');
-        toast('🗳️ Votes envoyés !');
-      }
-    });
+    $('#btn-submit-votes').addEventListener('click', submitVotes);
   }
 
   function allVotesCollected() {

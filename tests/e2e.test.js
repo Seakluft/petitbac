@@ -170,12 +170,12 @@ function check(name, cond) {
     await sleep(30);
     check('manche ' + round + ' : phase vote visible ×2', vis(host, '#screen-vote') && vis(guest, '#screen-vote'));
     qa(host, '#vote-list .vote-btns .up').forEach(b => b.dispatchEvent(new host.Event('click', { bubbles: true })));
-    click(host, '#btn-submit-votes');
+    // auto-envoi : plus besoin de cliquer (le host a tout voté)
     await sleep(10);
     qa(guest, '#vote-list .vote-btns .up').forEach(b => b.dispatchEvent(new guest.Event('click', { bubbles: true })));
-    click(guest, '#btn-submit-votes');
-    await sleep(40);
-    check('manche ' + round + ' : scores visibles ×2', vis(host, '#screen-scores') && vis(guest, '#screen-scores'));
+    await sleep(60); // le guest auto-envoie quand tout est voté
+    check('manche ' + round + ' : scores visibles ×2 (auto-envoi votes)', vis(host, '#screen-scores') && vis(guest, '#screen-scores'));
+    check('manche ' + round + ' : compteur de votes affiché', /mots vot/.test(q(guest, '#vote-count') ? q(guest, '#vote-count').textContent : ''));
     check('manche ' + round + ' : en-tête résultats correct', q(host, '#scores-round').textContent.includes('manche ' + round));
     check('manche ' + round + ' : points perso affichés', /\+\d+ pts cette manche/.test(q(guest, '#my-round-points') ? q(guest, '#my-round-points').textContent : ''));
     if (round < 3) {
