@@ -207,6 +207,7 @@
         maybeFinishVotes();
         break;
       }
+      case 'vote-ack': break; // émis par l'hôte, consommé par l'invité : ignorer côté hôte
       case 'leave': {
         removePlayer(from);
         break;
@@ -1228,7 +1229,7 @@
     } else toast(text);
   }
 
-  // ---------- overlay debug (par défaut, ?debug=0 pour masquer) ----------
+  // ---------- overlay debug (masqué par défaut ; ?debug=1 ou #debug pour l'afficher) ----------
   const JSERRS = [];
   window.addEventListener('error', e => {
     JSERRS.push(new Date().toLocaleTimeString() + ' ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno);
@@ -1290,8 +1291,8 @@
     el.textContent = debugSnapshot();
   }
   function initDebug() {
-    // debug par défaut (désactivable avec ?debug=0)
-    if (/[?&]debug=0/.test(location.search)) return;
+    // debug masqué par défaut ; ?debug=1 (ou #debug) pour l'activer
+    if (!/[?&]debug=1/.test(location.search) && !/debug=1/.test(location.hash)) return;
     window.__debugOn = true;
     renderDebug();
     setInterval(renderDebug, 500);

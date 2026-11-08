@@ -81,7 +81,7 @@ docs: livraison directe sur main
 
 ## Debug (diagnostic par capture d'écran)
 
-L'overlay debug est **affiché par défaut en haut de l'écran** (désactivable avec `?debug=0`). Une capture d'écran montre directement :
+L'overlay debug est **masqué par défaut**. Pour l'afficher, ajoute `?debug=1` à l'adresse (ex : `https://petitbac.kluft.ovh/?debug=1`) ou `#debug` à la fin du lien. Une capture d'écran montre directement :
 - phase courante, manche X/N, lettre, timer restant, rôle (hôte/invité), code de partie, `#room=`
 - état PeerJS : peerId, open/closed, **chaque connexion par joueur** (open/closed) → détecte une connexion P2P morte
 - joueurs (★ hôte, 💤 offline), tailles des listes chargées (`catSets: ville:85007 …`), taille du dictionnaire
